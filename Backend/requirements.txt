@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+requests>=2.31
+pandas
+numpy
+scipy
+scikit-learn
+joblib
+google-cloud-secret-manager>=2.20
+pytest>=8

@@ -1,0 +1,494 @@
+{
+  "model_sha256": "3b6aa294578cd2386cce524121e049d392b6a81b3376884590623ef71c019f1f",
+  "fit_seconds": 19.6,
+  "alert_k": 2,
+  "min_conf": 0.5,
+  "rows": {
+    "train": 157824,
+    "val": 52560,
+    "test": 43776
+  },
+  "feature_importance": {
+    "S": 0.15773828650495136,
+    "S_min6": 0.14248535458159975,
+    "C_dev_base": 0.10968213461050352,
+    "C": 0.10498407372880028,
+    "C_mean6": 0.08419208622401958,
+    "H_flat_run": 0.05815815191711892,
+    "T_std4": 0.056008228822514244,
+    "T_flat_run": 0.05547309446365311,
+    "dT3": 0.05272935805388916,
+    "T": 0.03496784525605874,
+    "T_dev_base": 0.03296925432257436,
+    "dT1": 0.03230786831865521,
+    "dT6": 0.03161698703378115,
+    "T_max6": 0.015103098131079688,
+    "T_min6": 0.010846232507007031,
+    "T_mean6": 0.00788767885699746,
+    "dH1": 0.006659864248996235,
+    "H": 0.004386994291760878,
+    "T_gt7_6": 0.001803408126039281
+  },
+  "results": {
+    "val": {
+      "threshold_only": {
+        "step": {
+          "macro_f1": 0.29394196299861064,
+          "report": {
+            "NONE": {
+              "precision": 0.9416158798693235,
+              "recall": 0.9991890850852474,
+              "f1-score": 0.9695485393921511,
+              "support": 49327.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.2903225806451613,
+              "recall": 0.1598984771573604,
+              "f1-score": 0.20621931260229132,
+              "support": 394.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 828.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 2011.0
+            },
+            "accuracy": 0.9389269406392694,
+            "macro avg": {
+              "precision": 0.3079846151286212,
+              "recall": 0.28977189056065195,
+              "f1-score": 0.29394196299861064,
+              "support": 52560.0
+            },
+            "weighted avg": {
+              "precision": 0.8858727854468857,
+              "recall": 0.9389269406392694,
+              "f1-score": 0.9114568343181495,
+              "support": 52560.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 76,
+              "recall_type": 0.2236842105263158,
+              "recall_any": 0.2236842105263158,
+              "ttd_median_h": 1.5,
+              "ttd_p90_h": 2.7
+            },
+            "COOLING_FAILURE": {
+              "events": 61,
+              "recall_type": 0.0,
+              "recall_any": 0.2459016393442623,
+              "ttd_median_h": null,
+              "ttd_p90_h": null
+            },
+            "SENSOR_DROPOUT": {
+              "events": 200,
+              "recall_type": 0.0,
+              "recall_any": 0.025,
+              "ttd_median_h": null,
+              "ttd_p90_h": null
+            }
+          },
+          "false_alerts_per_loc_day": 0.01643835616438356,
+          "alerts": 35,
+          "false_alerts": 18,
+          "alert_precision": 0.48571428571428577,
+          "event_recall_type": 0.050445103857566766,
+          "event_recall_any": 0.10979228486646884,
+          "events": 337
+        }
+      },
+      "rules": {
+        "step": {
+          "macro_f1": 0.7593277187379586,
+          "report": {
+            "NONE": {
+              "precision": 0.989517012044284,
+              "recall": 0.9893364688710037,
+              "f1-score": 0.9894267322216027,
+              "support": 49327.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.3874458874458874,
+              "recall": 0.4543147208121827,
+              "f1-score": 0.4182242990654206,
+              "support": 394.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.6644562334217506,
+              "recall": 0.605072463768116,
+              "f1-score": 0.6333754740834386,
+              "support": 828.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 0.9925962487660415,
+              "recall": 1.0,
+              "f1-score": 0.9962843695813723,
+              "support": 2011.0
+            },
+            "accuracy": 0.9796803652968037,
+            "macro avg": {
+              "precision": 0.7585038454194909,
+              "recall": 0.7621809133628257,
+              "f1-score": 0.7593277187379586,
+              "support": 52560.0
+            },
+            "weighted avg": {
+              "precision": 0.9800007638946688,
+              "recall": 0.9796803652968037,
+              "f1-score": 0.9797982411319636,
+              "support": 52560.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 76,
+              "recall_type": 0.5789473684210527,
+              "recall_any": 0.5789473684210527,
+              "ttd_median_h": 1.25,
+              "ttd_p90_h": 2.8500000000000014
+            },
+            "COOLING_FAILURE": {
+              "events": 61,
+              "recall_type": 0.819672131147541,
+              "recall_any": 0.8688524590163934,
+              "ttd_median_h": 2.0,
+              "ttd_p90_h": 4.5
+            },
+            "SENSOR_DROPOUT": {
+              "events": 200,
+              "recall_type": 1.0,
+              "recall_any": 1.0,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 0.5
+            }
+          },
+          "false_alerts_per_loc_day": 0.0867579908675799,
+          "alerts": 399,
+          "false_alerts": 95,
+          "alert_precision": 0.7619047619047619,
+          "event_recall_type": 0.8724035608308606,
+          "event_recall_any": 0.8813056379821959,
+          "events": 337
+        }
+      },
+      "random_forest": {
+        "step": {
+          "macro_f1": 0.8292478707164378,
+          "report": {
+            "NONE": {
+              "precision": 0.9975503818522407,
+              "recall": 0.982423419222738,
+              "f1-score": 0.9899291156823893,
+              "support": 49327.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.3333333333333333,
+              "recall": 0.8477157360406091,
+              "f1-score": 0.4785100286532951,
+              "support": 394.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.7871900826446281,
+              "recall": 0.9202898550724637,
+              "f1-score": 0.8485523385300668,
+              "support": 828.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 2011.0
+            },
+            "accuracy": 0.9811073059360731,
+            "macro avg": {
+              "precision": 0.7795184494575504,
+              "recall": 0.9376072525839527,
+              "f1-score": 0.8292478707164378,
+              "support": 52560.0
+            },
+            "weighted avg": {
+              "precision": 0.9893511112516851,
+              "recall": 0.9811073059360731,
+              "f1-score": 0.9842535726190546,
+              "support": 52560.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 76,
+              "recall_type": 0.9210526315789473,
+              "recall_any": 0.9210526315789473,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 1.5
+            },
+            "COOLING_FAILURE": {
+              "events": 61,
+              "recall_type": 0.9672131147540983,
+              "recall_any": 0.9836065573770492,
+              "ttd_median_h": 1.0,
+              "ttd_p90_h": 2.0
+            },
+            "SENSOR_DROPOUT": {
+              "events": 200,
+              "recall_type": 1.0,
+              "recall_any": 1.0,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 0.5
+            }
+          },
+          "false_alerts_per_loc_day": 0.0867579908675799,
+          "alerts": 427,
+          "false_alerts": 95,
+          "alert_precision": 0.7775175644028103,
+          "event_recall_type": 0.9762611275964391,
+          "event_recall_any": 0.9792284866468842,
+          "events": 337
+        }
+      }
+    },
+    "test": {
+      "threshold_only": {
+        "step": {
+          "macro_f1": 0.2836588343278049,
+          "report": {
+            "NONE": {
+              "precision": 0.9406204111600588,
+              "recall": 0.9990009016253625,
+              "f1-score": 0.9689320617813545,
+              "support": 41037.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.22395833333333334,
+              "recall": 0.13149847094801223,
+              "f1-score": 0.16570327552986513,
+              "support": 327.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 646.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1-score": 0.0,
+              "support": 1766.0
+            },
+            "accuracy": 0.9374771564327485,
+            "macro avg": {
+              "precision": 0.29114468612334804,
+              "recall": 0.2826248431433437,
+              "f1-score": 0.2836588343278049,
+              "support": 43776.0
+            },
+            "weighted avg": {
+              "precision": 0.8834401084561251,
+              "recall": 0.9374771564327485,
+              "f1-score": 0.9095451843571754,
+              "support": 43776.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 68,
+              "recall_type": 0.20588235294117646,
+              "recall_any": 0.20588235294117646,
+              "ttd_median_h": 2.25,
+              "ttd_p90_h": 3.700000000000001
+            },
+            "COOLING_FAILURE": {
+              "events": 45,
+              "recall_type": 0.0,
+              "recall_any": 0.35555555555555557,
+              "ttd_median_h": null,
+              "ttd_p90_h": null
+            },
+            "SENSOR_DROPOUT": {
+              "events": 170,
+              "recall_type": 0.0,
+              "recall_any": 0.0058823529411764705,
+              "ttd_median_h": null,
+              "ttd_p90_h": null
+            }
+          },
+          "false_alerts_per_loc_day": 0.02412280701754386,
+          "alerts": 35,
+          "false_alerts": 22,
+          "alert_precision": 0.37142857142857144,
+          "event_recall_type": 0.04946996466431095,
+          "event_recall_any": 0.10954063604240283,
+          "events": 283
+        }
+      },
+      "rules": {
+        "step": {
+          "macro_f1": 0.7256789780585273,
+          "report": {
+            "NONE": {
+              "precision": 0.988716673977677,
+              "recall": 0.9886443940833881,
+              "f1-score": 0.9886805327094833,
+              "support": 41037.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.3098159509202454,
+              "recall": 0.308868501529052,
+              "f1-score": 0.3093415007656968,
+              "support": 327.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.6080870917573873,
+              "recall": 0.6052631578947368,
+              "f1-score": 0.6066718386346005,
+              "support": 646.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 0.9960518894529047,
+              "recall": 1.0,
+              "f1-score": 0.9980220401243289,
+              "support": 1766.0
+            },
+            "accuracy": 0.9783671418128655,
+            "macro avg": {
+              "precision": 0.7256679015270536,
+              "recall": 0.7256940133767942,
+              "f1-score": 0.7256789780585273,
+              "support": 43776.0
+            },
+            "weighted avg": {
+              "precision": 0.9783243755487471,
+              "recall": 0.9783671418128655,
+              "f1-score": 0.9783455460107585,
+              "support": 43776.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 68,
+              "recall_type": 0.4264705882352941,
+              "recall_any": 0.4411764705882353,
+              "ttd_median_h": 1.5,
+              "ttd_p90_h": 3.0999999999999996
+            },
+            "COOLING_FAILURE": {
+              "events": 45,
+              "recall_type": 0.8444444444444444,
+              "recall_any": 0.8888888888888888,
+              "ttd_median_h": 2.5,
+              "ttd_p90_h": 3.0
+            },
+            "SENSOR_DROPOUT": {
+              "events": 170,
+              "recall_type": 1.0,
+              "recall_any": 1.0,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 0.5
+            }
+          },
+          "false_alerts_per_loc_day": 0.08771929824561403,
+          "alerts": 325,
+          "false_alerts": 80,
+          "alert_precision": 0.7538461538461538,
+          "event_recall_type": 0.8374558303886925,
+          "event_recall_any": 0.8480565371024735,
+          "events": 283
+        }
+      },
+      "random_forest": {
+        "step": {
+          "macro_f1": 0.810279846893138,
+          "report": {
+            "NONE": {
+              "precision": 0.9968811109185871,
+              "recall": 0.9813826546774862,
+              "f1-score": 0.9890711724544428,
+              "support": 41037.0
+            },
+            "TEMP_EXCURSION": {
+              "precision": 0.3198482932996207,
+              "recall": 0.7737003058103975,
+              "f1-score": 0.4525939177101968,
+              "support": 327.0
+            },
+            "COOLING_FAILURE": {
+              "precision": 0.7146341463414634,
+              "recall": 0.9071207430340558,
+              "f1-score": 0.7994542974079127,
+              "support": 646.0
+            },
+            "SENSOR_DROPOUT": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1-score": 1.0,
+              "support": 1766.0
+            },
+            "accuracy": 0.9794864766081871,
+            "macro avg": {
+              "precision": 0.7578408876399179,
+              "recall": 0.9155509258804848,
+              "f1-score": 0.810279846893138,
+              "support": 43776.0
+            },
+            "weighted avg": {
+              "precision": 0.9877844983372537,
+              "recall": 0.9794864766081871,
+              "f1-score": 0.9827064919414682,
+              "support": 43776.0
+            }
+          }
+        },
+        "event": {
+          "per_type": {
+            "TEMP_EXCURSION": {
+              "events": 68,
+              "recall_type": 0.7941176470588235,
+              "recall_any": 0.8088235294117647,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 1.5
+            },
+            "COOLING_FAILURE": {
+              "events": 45,
+              "recall_type": 0.9555555555555556,
+              "recall_any": 1.0,
+              "ttd_median_h": 1.0,
+              "ttd_p90_h": 2.0
+            },
+            "SENSOR_DROPOUT": {
+              "events": 170,
+              "recall_type": 1.0,
+              "recall_any": 1.0,
+              "ttd_median_h": 0.5,
+              "ttd_p90_h": 0.5
+            }
+          },
+          "false_alerts_per_loc_day": 0.10635964912280702,
+          "alerts": 367,
+          "false_alerts": 97,
+          "alert_precision": 0.7356948228882834,
+          "event_recall_type": 0.9434628975265018,
+          "event_recall_any": 0.9540636042402827,
+          "events": 283
+        }
+      }
+    }
+  }
+}
