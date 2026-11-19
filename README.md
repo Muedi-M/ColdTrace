@@ -9,12 +9,34 @@
 ![SDG 3](https://img.shields.io/badge/SDG-3%20Good%20Health%20%26%20Well--Being-4C9F38)
 
 **Know before the product spoils.**
+
+🔗 **Live demo:** <https://coldtrace-app-uxg3hjnrfa-uc.a.run.app/>
+
 ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
+
+---
+
+## About ColdTrace
+
+Vaccines, medicines and perishable food lose value (and sometimes safety) the moment a cold room drifts out of its safe temperature band. In many distribution centers, problems such as a door left open, a failing compressor or a frozen sensor are noticed only after the inventory is already damaged, and fixed-threshold alarms fire so often that operators learn to ignore them.
+
+ColdTrace is a cold-chain operations console that closes that gap. It ingests sensor readings every 30 minutes, scores them with a Random Forest anomaly detector alongside an SOP threshold baseline, and raises debounced alerts that move through an `OPEN → ACKNOWLEDGED → CLOSED` lifecycle. Each alert is sealed with a SHA-256 evidence hash over the exact triggering readings, so the record is tamper-evident. Operators can optionally request an NVIDIA NIM incident note, which is always labeled **AI-GENERATED, REVIEW BEFORE ACTING** and never acts on a case by itself.
+
+**What it gives you**
+
+- Early detection of temperature excursions, cooling failures and sensor dropouts across multiple sites.
+- Fewer false alarms through causal rolling features and alert debouncing.
+- A calm, dark-mode control-room dashboard served directly by FastAPI.
+- Tamper-evident evidence trails for quality reviewers and compliance auditors.
+- A serverless, free-tier-first Google Cloud foundation, defined entirely in Terraform and deployed through keyless CI/CD.
+
+**Built with:** Python 3.12, FastAPI, scikit-learn (Random Forest), NVIDIA NIM, Google Cloud Run, Firestore, BigQuery, Pub/Sub, Secret Manager, Terraform and GitHub Actions with Workload Identity Federation.
 
 ---
 
 ## 📑 Table of Contents
 
+0. [About ColdTrace](#about-coldtrace)
 1. [Problem, Audience & SDG Alignment](#1-problem-audience--sdg-alignment)
 2. [System Architecture](#2-system-architecture)
 3. [Repository Structure](#3-repository-structure)
@@ -29,7 +51,7 @@ ColdTrace monitors refrigerated storage facilities in real time, detects tempera
 12. [Google Cloud Run Deployment](#12-google-cloud-run-deployment)
 13. [API Reference](#13-api-reference)
 14. [Security & Design Guardrails](#14-security--design-guardrails)
-15. [DevSecOps: Secret, Dependency, SAST & DAST Checks](#15-devsecops-secret-dependency-sast--dast-checks)
+15. [Security Practices & Secret Handling](#15-security-practices--secret-handling)
 16. [Ownership Summary (RACI)](#16-ownership-summary-raci)
 
 ---
@@ -69,7 +91,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph DEV[Delivery pipeline]
-        GH[GitHub repository] -->|push / PR| GHA[GitHub Actions]
+        GH[GitHub repository] -->|push / PR| GHA[GitHub Actions<br/>ci-deploy.yml]
         GHA -->|OIDC token, keyless| WIF[Workload Identity Federation]
         WIF -->|impersonates| CICD[coldtrace-cicd-sa]
         TF[Terraform IaC] -.->|provisions| GCP
@@ -112,7 +134,7 @@ flowchart TB
 | **Secret Manager** | Holds `INGEST_API_KEY` and `NVIDIA_API_KEY`; injected at runtime. |
 | **Artifact Registry** | Stores container images built by CI/CD. |
 | **Terraform** | Declares all infrastructure, IAM bindings, budgets and guardrails. |
-| **GitHub Actions + WIF** | Keyless build, push and deploy. |
+| **GitHub Actions + WIF** | Keyless build, push and deploy through a single `ci-deploy.yml` workflow. |
 
 ---
 
@@ -123,15 +145,9 @@ coldtrace/
 ├── README.md               # Project overview, team & setup guide
 ├── env.example             # Sample environment variables (never commit .env)
 ├── terraform/              # Infrastructure as Code (project, IAM, WIF, budget, services)
-├── .gitleaks.toml          # Gitleaks config (allowlist for dummy placeholders)
 ├── .github/
-│   ├── dependabot.yml      # Weekly dependency update PRs (pip, Actions, Terraform)
 │   └── workflows/
-│       ├── ci-deploy.yml        # Tests, Terraform validate, WIF deploy to Cloud Run
-│       ├── codeql.yml           # SAST (CodeQL: Python + Actions)
-│       ├── secret-scan.yml      # Gitleaks secret scanning
-│       ├── dependency-audit.yml # pip-audit + dependency review
-│       └── dast.yml             # OWASP ZAP baseline + API scan
+│       └── ci-deploy.yml   # Single pipeline: tests, Terraform validate, WIF deploy to Cloud Run
 └── Backend/
     ├── coldtrace/
     │   ├── api.py          # FastAPI server, dashboard routes, auth & NIM endpoints
@@ -199,7 +215,7 @@ coldtrace/
 **Responsibilities**
 - Owns the GCP project, the billing account and the **`$1/month` budget guardrail**.
 - Manages **Terraform** infrastructure as code.
-- Manages **GitHub Actions CI/CD** with **Workload Identity Federation** (keyless authentication).
+- Manages the **GitHub Actions CI/CD** pipeline (`ci-deploy.yml`) with **Workload Identity Federation** (keyless authentication).
 - Manages **Secret Manager** secret creation and rotation.
 - Oversees cost and quota limits and overall **production reliability**.
 - Delivers the local/WSL environment setup, API workflow endpoints, full-stack console integration and Cloud Run deployment.
@@ -296,15 +312,17 @@ coldtrace/
 
 **Owner:** Moorthy R (with Mbambala T for build and deploy specifics)
 
+The whole pipeline lives in **one workflow file: `.github/workflows/ci-deploy.yml`**.
+
 ```text
-git push ──► GitHub Actions ──► OIDC token ──► Workload Identity Federation
-                                                      │
-                                         impersonate coldtrace-cicd-sa
-                                                      │
-                        ┌─────────────────────────────┴───────────────┐
-                        ▼                                             ▼
-              Build & push image                          Deploy Cloud Run revision
-              to Artifact Registry                        (runs as coldtrace-runtime-sa)
+git push ──► GitHub Actions (ci-deploy.yml) ──► OIDC token ──► Workload Identity Federation
+                                                                      │
+                                                         impersonate coldtrace-cicd-sa
+                                                                      │
+                                        ┌─────────────────────────────┴───────────────┐
+                                        ▼                                             ▼
+                              Build & push image                          Deploy Cloud Run revision
+                              to Artifact Registry                        (runs as coldtrace-runtime-sa)
 ```
 
 - **No service-account JSON keys** exist anywhere; GitHub authenticates through short-lived OIDC tokens.
@@ -315,33 +333,22 @@ git push ──► GitHub Actions ──► OIDC token ──► Workload Identi
 
 ### 7.1 Pipeline stages
 
-Every push and pull request fans out into five independent workflows. The deploy job runs only on `main`, after the test job passes. Branch protection (7.4) makes the other four required before a pull request can merge.
+`ci-deploy.yml` runs on every push and pull request. The `test-and-validate` job always runs; the `deploy` job runs only on `main` and only after `test-and-validate` passes.
 
 ```mermaid
 flowchart LR
-    PR[Pull request or push] --> T[ci-deploy.yml<br/>tests + terraform validate]
-    PR --> C[codeql.yml<br/>SAST]
-    PR --> S[secret-scan.yml<br/>Gitleaks]
-    PR --> D[dependency-audit.yml<br/>pip-audit + dependency review]
-    PR --> Z[dast.yml<br/>OWASP ZAP]
-    T --> G{Required checks green?}
-    C --> G
-    S --> G
-    D --> G
-    Z --> G
-    G -->|merge to main| DEP[ci-deploy.yml deploy job<br/>WIF to Artifact Registry to Cloud Run]
+    PR[Pull request or push] --> T[test-and-validate<br/>pytest + terraform fmt/validate]
+    T --> G{Tests green?}
+    G -->|pull request| M[Eligible to merge]
+    G -->|push to main| DEP[deploy<br/>WIF to Artifact Registry to Cloud Run]
 ```
 
-### 7.2 Workflow catalogue
+### 7.2 Workflow: `ci-deploy.yml`
 
-| Workflow file | Triggers | What it does | Blocks merge? | Owner |
+| Job | Triggers | What it does | Blocks merge? | Owner |
 |---|---|---|---|---|
-| `ci-deploy.yml` | push to `main`, pull request, manual | Runs `pytest`, Terraform `fmt`/`validate`, then (on `main`) builds, pushes and deploys through WIF | Yes (`test-and-validate`) | Moorthy R |
-| `codeql.yml` | push, pull request, weekly | CodeQL SAST for Python and GitHub Actions workflows (`security-extended` queries) | Yes | Dr. Peter Opiyo (triage) |
-| `secret-scan.yml` | push, pull request, weekly | Gitleaks scan of the full git history for committed secrets | Yes | Moorthy R / Dr. Peter Opiyo |
-| `dependency-audit.yml` | push, pull request, weekly | `pip-audit` on `Backend/requirements.txt`; dependency review on pull requests (fails on high severity) | Yes | Moorthy R |
-| `dast.yml` | pull request, weekly, manual | Starts the API on the runner and scans it with OWASP ZAP (baseline + OpenAPI scan) | Report-only at first, then yes | Dr. Peter Opiyo |
-| `dependabot.yml` | weekly | Opens update pull requests for pip, GitHub Actions and Terraform providers | n/a | Moorthy R |
+| `test-and-validate` | push to `main`, pull request, manual | Installs dependencies, runs `pytest`, then Terraform `fmt` and `validate` | Yes | Moorthy R |
+| `deploy` | push to `main` (after `test-and-validate` passes), manual | Authenticates through WIF, builds and pushes the image to Artifact Registry, deploys a new Cloud Run revision | n/a (runs after merge) | Moorthy R / Mbambala T |
 
 ### 7.3 GitHub secrets used by the pipeline
 
@@ -353,14 +360,14 @@ flowchart LR
 
 - There is **no service-account JSON key** in GitHub or anywhere else. Authentication is a short-lived OIDC token exchanged through WIF.
 - `INGEST_API_KEY` and `NVIDIA_API_KEY` for production live in **Secret Manager**, never in GitHub.
-- The values `change-me-local-only` and `dummy-key-for-tests` that appear in test workflows and tests are dummy placeholders with no access to anything.
-- The security workflows run with `permissions: contents: read` by default. Only CodeQL gets `security-events: write`, and only the dependency review job gets `pull-requests: write`.
+- The values `change-me-local-only` and `dummy-key-for-tests` that appear in the workflow and tests are dummy placeholders with no access to anything.
+- The workflow uses minimal permissions: `contents: read` by default, with `id-token: write` granted only to the deploy job so it can request the OIDC token.
 
 ### 7.4 Branch protection (Settings → Branches → rule for `main`)
 
 Enable:
 - Require a pull request before merging.
-- Require status checks to pass: `test-and-validate`, `analyze (python)`, `analyze (actions)`, `gitleaks`, `pip-audit`, `dependency-review`. Add `zap-scan` once DAST is switched from report-only to blocking.
+- Require the status check `test-and-validate` to pass.
 - Require branches to be up to date before merging.
 - Block force pushes and deletions.
 
@@ -487,7 +494,7 @@ pytest -q tests
 
 ## 12. Google Cloud Run Deployment
 
-The included `Backend/Dockerfile` packages both the FastAPI backend and the `frontend/index.html` dashboard into a single container that runs within Cloud Run's Always Free tier (scale-to-zero when idle). Production deployments are normally performed by **GitHub Actions** (see [section 7](#7-cicd--infrastructure-as-code)); the manual path below is for bootstrap and troubleshooting.
+The included `Backend/Dockerfile` packages both the FastAPI backend and the `frontend/index.html` dashboard into a single container that runs within Cloud Run's Always Free tier (scale-to-zero when idle). Production deployments are normally performed by **GitHub Actions** through `ci-deploy.yml` (see [section 7](#7-cicd--infrastructure-as-code)); the manual path below is for bootstrap and troubleshooting.
 
 **1. Authenticate and enable the required GCP APIs**
 
@@ -568,24 +575,22 @@ curl -X POST http://localhost:8000/ingest \
 - **Least privilege:** The runtime service account and every human role are scoped to the minimum required; the security reviewer is strictly read-only.
 - **Secrets:** Stored in Secret Manager and injected at runtime; engineers hold `secretmanager.viewer` (metadata) only, never raw values.
 - **Auditability:** Cloud Audit Logs and Cloud Monitoring alerts are reviewed by the Cyber Security Reviewer.
-- **Automated security testing:** secret scanning, dependency audits, CodeQL SAST and OWASP ZAP DAST run on every pull request (see [section 15](#15-devsecops-secret-dependency-sast--dast-checks)).
+- **Security hygiene:** Secret handling, rotation and local pre-push checks are documented in [section 15](#15-security-practices--secret-handling).
 - **Persistence:** Firestore provides durable alert state across container restarts and instances. If Firestore is not configured, state falls back to in-memory and resets on cold start.
 
 ---
 
-## 15. DevSecOps: Secret, Dependency, SAST & DAST Checks
-
-Security checks run automatically on every pull request and weekly on `main`, so new vulnerabilities in unchanged code are still caught.
+## 15. Security Practices & Secret Handling
 
 ### 15.1 Layers at a glance
 
-| Layer | Tool | Finds | Workflow | Where results appear |
-|---|---|---|---|---|
-| Secrets | Gitleaks + GitHub secret scanning and push protection | API keys, tokens and credentials committed to the repo | `secret-scan.yml` | Failed check, job log |
-| Dependencies | `pip-audit`, dependency review, Dependabot | Known CVEs in Python packages and risky new dependencies | `dependency-audit.yml`, `dependabot.yml` | Failed check, PR comment, Dependabot PRs |
-| SAST | CodeQL (`security-extended`) | Injection, unsafe deserialization, weak crypto, insecure workflow patterns in code | `codeql.yml` | Security → Code scanning |
-| DAST | OWASP ZAP baseline + API scan | Missing security headers, auth gaps, exposed endpoints and misconfiguration in the running app | `dast.yml` | Workflow artifacts (HTML/JSON/MD reports) |
-| Runtime | Cloud Audit Logs, Cloud Monitoring | Rejected auth, unusual access, IAM changes | Managed in GCP | Cloud Logging and Monitoring |
+| Layer | Control | Where it applies |
+|---|---|---|
+| Secrets | Secret Manager, `.gitignore`d `.env`, placeholder-only `env.example`, GitHub secret scanning and push protection | Repo settings and GCP |
+| CI/CD identity | Workload Identity Federation, no JSON keys, repo-scoped trust rule | `ci-deploy.yml` and Terraform |
+| Code quality | `pytest` and Terraform `fmt`/`validate` on every push and pull request | `ci-deploy.yml` |
+| Dependencies | `pip-audit` run locally before pushing | Developer machine |
+| Runtime | Cloud Audit Logs, Cloud Monitoring | Managed in GCP |
 
 ### 15.2 Secret security
 
@@ -594,7 +599,7 @@ Security checks run automatically on every pull request and weekly on `main`, so
 2. Production secrets (`INGEST_API_KEY`, `NVIDIA_API_KEY`) live only in **Secret Manager** and are bound to Cloud Run with `--set-secrets`.
 3. Only `coldtrace-runtime-sa` can read secret values. Engineers and the auditor hold `secretmanager.viewer` (metadata only).
 4. CI uses short-lived OIDC credentials through WIF, so there is no key file to leak.
-5. Turn on GitHub **Secret scanning** and **Push protection** (Settings → Code security) so leaks are blocked before they reach the repo. Gitleaks in CI is the second layer.
+5. Turn on GitHub **Secret scanning** and **Push protection** (Settings → Code security) so leaks are blocked before they reach the repo.
 
 **Rotation procedure** (owner: Moorthy R)
 ```bash
@@ -613,79 +618,20 @@ gcloud secrets versions disable <OLD_VERSION_ID> --secret INGEST_API_KEY
 1. Revoke or rotate it immediately (above); for the NVIDIA key, regenerate it in NGC.
 2. Check Cloud Audit Logs and Cloud Run request logs for misuse (Dr. Peter Opiyo).
 3. Remove it from git history (`git filter-repo` or BFG), then force-push after coordinating with the team. Rotation is the real fix; history cleanup only reduces further exposure.
-4. Record what happened and add a Gitleaks rule or allowlist change if the scanner missed it.
+4. Record what happened and how it was caught.
 
-**Local pre-commit check (optional)**
-```bash
-gitleaks detect --source . --redact --verbose
-```
+### 15.3 Local pre-push checklist
 
-### 15.3 Dependency checks
-
-- `pip-audit --strict` fails the build on any known vulnerability in `Backend/requirements.txt`.
-- Dependency review blocks pull requests that add dependencies with **high** or **critical** vulnerabilities.
-- Dependabot opens weekly update pull requests for pip, GitHub Actions and Terraform providers.
-- `fastapi` and `starlette` are pinned to compatible ranges so the Starlette `TestClient` keeps working. Raise the pins deliberately in a pull request, never implicitly.
-- Run locally before pushing:
-  ```bash
-  pip install pip-audit
-  pip-audit -r Backend/requirements.txt
-  ```
-
-### 15.4 SAST with CodeQL
-
-- Scans `python` (application) and `actions` (the workflow files themselves, for injection and over-broad permissions).
-- Uses the `security-extended` query suite, which adds more security rules than the default.
-- Results appear under **Security → Code scanning**; pull requests show alerts inline.
-- CodeQL is free for public repositories. Private repositories need GitHub Advanced Security.
-- Treat alerts in `api.py` (authentication, input validation) and `nim.py` (outbound requests) as highest priority.
-
-### 15.5 DAST with OWASP ZAP
-
-How it works:
-1. The workflow installs the backend and starts `uvicorn` on the runner with a **random throwaway `INGEST_API_KEY`** and a fake NVIDIA key, so no real credentials or cloud resources are touched.
-2. **ZAP baseline scan** crawls the web console and checks passive rules (security headers, cookies, information disclosure).
-3. **ZAP API scan** reads `/openapi.json` and probes every endpoint, including unauthenticated access to protected routes.
-4. HTML, JSON and Markdown reports are uploaded as workflow artifacts (`zap-baseline-report`, `zap-api-report`).
-
-Policy:
-- First phase: `fail_action: false` (report-only) while findings are triaged.
-- Second phase: set `fail_action: true`, using a `.zap/rules.tsv` file to document accepted findings, and add `zap-scan` to required checks.
-- Never point the scanner at the production Cloud Run URL. Scan production-like staging only, with the owner's written approval.
-
-Expected results and what they mean:
-- `/ingest`, `/alerts/{id}/explain` and the case mutation routes must answer **401** without a valid `X-API-Key`.
-- Public routes (`/`, `/healthz`) must not leak stack traces or secrets.
-- Missing headers (for example `Content-Security-Policy`, `X-Content-Type-Options`) are reported as warnings to fix in FastAPI middleware.
-
-Run it locally (Docker required):
-```bash
-cd Backend
-export INGEST_API_KEY=$(openssl rand -hex 24) NVIDIA_API_KEY=local-test
-uvicorn coldtrace.api:app --port 8000 &
-docker run --rm --network host -v "$PWD:/zap/wrk" ghcr.io/zaproxy/zaproxy:stable \
-  zap-baseline.py -t http://localhost:8000 -r zap-report.html
-```
-
-### 15.6 Findings triage and ownership
-
-| Severity | Examples | Target fix | Who fixes | Who verifies |
-|---|---|---|---|---|
-| Critical | Leaked secret, exploitable injection, auth bypass | Same day (rotate first) | Moorthy R / Mbambala T | Dr. Peter Opiyo |
-| High | Vulnerable dependency with a known exploit, broken access control | 3 days | Owner of the component | Dr. Peter Opiyo |
-| Medium | Missing security headers, weak validation | Next sprint | Owner of the component | Dr. Peter Opiyo |
-| Low / info | Hardening suggestions | Backlog | Team | Dr. Peter Opiyo |
-
-Dr. Peter Opiyo triages new alerts weekly. Accepted risks are recorded in the pull request or issue with a reason and a review date. Nobody dismisses alerts silently.
-
-### 15.7 Pre-push checklist
+Run these on your machine before opening a pull request. They are optional helpers and are not part of `ci-deploy.yml`.
 
 ```bash
 cd Backend && pytest -q tests && cd ..
-pip-audit -r Backend/requirements.txt
-gitleaks detect --source . --redact
+pip install pip-audit && pip-audit -r Backend/requirements.txt
+gitleaks detect --source . --redact --verbose
 terraform -chdir=terraform fmt -check -recursive
 ```
+
+> `fastapi` and `starlette` are pinned to compatible ranges so the Starlette `TestClient` keeps working. Raise the pins deliberately in a pull request, never implicitly.
 
 ---
 
@@ -697,7 +643,7 @@ terraform -chdir=terraform fmt -check -recursive
 |---|:---:|:---:|:---:|:---:|
 | GCP project, billing & `$1/month` budget | **A/R** | I | I | I |
 | Terraform IaC | **A/R** | | C | C |
-| GitHub Actions CI/CD & WIF | **A/R** | | C | C |
+| GitHub Actions CI/CD (`ci-deploy.yml`) & WIF | **A/R** | | C | C |
 | Secret Manager & rotation | **A/R** | | I | C |
 | Container build & Cloud Run deploy | A | | **R** | I |
 | Pub/Sub, Scheduler, Firestore pipelines | A | | **R** | I |
@@ -706,10 +652,8 @@ terraform -chdir=terraform fmt -check -recursive
 | Partition-aware querying & trend validation | I | **A/R** | C | I |
 | IAM, WIF & audit-log review | C | | C | **A/R** |
 | Monitoring alerts & evidence integrity review | C | | C | **A/R** |
-| Secret scanning, rotation & leak response | **A/R** | | I | R |
-| Dependency vulnerability management | **A/R** | | R | C |
-| SAST (CodeQL) triage and remediation | R | | R | **A/R** |
-| DAST (OWASP ZAP) scans and triage | C | | R | **A/R** |
+| Secret handling, rotation & leak response | **A/R** | | I | R |
+| Dependency updates (local `pip-audit`) | **A/R** | | R | C |
 | Branch protection & required checks | **A/R** | | C | C |
 | Production reliability & cost/quota oversight | **A/R** | | R | C |
 
