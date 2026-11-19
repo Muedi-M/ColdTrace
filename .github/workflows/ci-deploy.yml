@@ -29,6 +29,9 @@ jobs:
 
       - name: Install backend dependencies and run tests
         working-directory: Backend
+        env:
+          INGEST_API_KEY: change-me-local-only
+          NVIDIA_API_KEY: dummy-key-for-tests
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
