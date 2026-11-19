@@ -34,6 +34,8 @@ jobs:
           INGEST_API_KEY: change-me-local-only
           NVIDIA_API_KEY: dummy-key-for-tests
         run: |
+          echo "Commit under test: ${{ github.sha }}"
+          grep -c "dependency_overrides" tests/test_security.py || true
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip list | grep -Ei "fastapi|starlette|httpx|anyio"
