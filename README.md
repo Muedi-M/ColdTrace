@@ -183,18 +183,18 @@ coldtrace/
 
 | Member | Role | Primary focus |
 |---|---|---|
-| **Moorthy R** | Lead DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
+| **Moorthy R** | DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
 | **Chantell Ntokozo** | Data Analyst | BigQuery data loading, partition-aware querying, telemetry validation |
 | **Mbambala T** | AI & Cloud Foundation Engineer | AI/ML pipeline, container builds, Cloud Run, Pub/Sub, Scheduler, Firestore |
 | **Dr. Peter Opiyo** | Cyber Security Reviewer | Read-only audit of IAM, WIF, logs, monitoring and evidence integrity |
 
-### 5.1 Lead DevOps & Cloud Owner — Moorthy R
+### 5.1 DevOps & Cloud Owner — Moorthy R
 
 **Contact:** `moorthyrtmp@gmail.com`
 
 **Roles**
 - Project Owner
-- Billing Account Administrator (`010697-20205C-D3171B`)
+- Billing Account Administrator
 
 **Responsibilities**
 - Owns the GCP project, the billing account and the **`$1/month` budget guardrail**.
