@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ColdTrace — Cold Chain Operations Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F3F5F9;
+      --surface: #FFFFFF;
+      --surface-soft: #F8FAFC;
+      --border: #E2E8F0;
+      --border-strong: #CBD5E1;
+      --text: #0F172A;
+      --muted: #64748B;
+      --orange: #E85D1A;
+      --orange-hover: #D14D0E;
+      --orange-bg: #FFF5EE;
+      --orange-border: #FED7AA;
+      --red: #DC2626;
+      --red-bg: #FEF2F2;
+      --blue: #2563EB;
+      --blue-bg: #EFF6FF;
+      --green: #16A34A;
+      --green-bg: #F0FDF4;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+      --shadow-md: 0 10px 26px rgba(15, 23, 42, 0.06);
+      --shadow-lg: 0 24px 48px rgba(15, 23, 42, 0.16);
+    }
+    * { box-sizing: border-box; font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+    /* Responsive Layout Shell */
+    .layout { display: flex; min-height: 100vh; max-width: 1320px; margin: 0 auto; }
+
+    /* Desktop Left Sidebar */
+    .sidebar { display: none; width: 256px; background: var(--surface); border-right: 1px solid var(--border); padding: 24px 16px; flex-direction: column; justify-content: space-between; position: sticky; top: 0; height: 100vh; flex-shrink: 0; }
+    @media (min-width: 960px) {
+      .sidebar { display: flex; }
+      .bottom-nav { display: none !important; }
+      .app-main { padding-bottom: 32px !important; }
+    }
+    .side-brand { display: flex; align-items: center; gap: 12px; padding: 0 8px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .snowflake { width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #FFF1E6, #FFEDD5); color: var(--orange); display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: inset 0 0 0 1px #FED7AA; flex-shrink: 0; }
+    .side-nav-btn { width: 100%; border: none; background: transparent; color: var(--muted); padding: 11px 14px; border-radius: 12px; font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 6px; transition: all 150ms ease; }
+    .side-nav-btn:hover { background: var(--surface-soft); color: var(--text); }
+    .side-nav-btn.active { background: var(--blue-bg); color: var(--blue); }
+    .pill-counter { background: var(--red); color: #FFF; font-size: 11px; padding: 2px 7px; border-radius: 999px; font-weight: 700; }
+
+    /* Main Content Area */
+    .app-main { flex: 1; min-width: 0; padding-bottom: 88px; }
+    .top-bar { padding: 18px 24px 14px; display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .brand-title { font-size: 21px; font-weight: 800; margin: 0; letter-spacing: -0.025em; }
+    .brand-sub { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
+    .top-actions { display: flex; align-items: center; gap: 10px; flex: 1; justify-content: flex-end; min-width: 240px; }
+    .search-box { position: relative; flex: 1; max-width: 290px; }
+    .search-box input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px 9px 34px; font-size: 13px; color: var(--text); outline: none; transition: border-color 150ms; box-shadow: var(--shadow-sm); }
+    .search-box input:focus { border-color: var(--blue); }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--muted); }
+    .mascot { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #DBEAFE, #EFF6FF); border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: var(--shadow-sm); cursor: pointer; transition: transform 150ms; flex-shrink: 0; }
+    .mascot:hover { transform: scale(1.06); }
+
+    /* Collapsible Config Bar */
+    .config-drawer { margin: 0 24px 16px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; display: none; gap: 10px; align-items: center; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
+    .config-drawer.open { display: flex; }
+    .config-drawer input { flex: 1; min-width: 180px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 13px; background: var(--surface-soft); }
+
+    .screen { padding: 4px 24px 20px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow-sm); transition: border-color 150ms, box-shadow 150ms; }
+    .card.interactive:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); cursor: pointer; }
+
+    /* Desktop 2-Column Dashboard Grid */
+    .home-grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+    @media (min-width: 960px) { .home-grid { grid-template-columns: 1.05fr 1.15fr; align-items: start; } }
+
+    /* Action Required Hero Banner */
+    .alert-banner { background: linear-gradient(135deg, #FFF5EC 0%, #FFFBF7 100%); border: 1px solid var(--orange-border); border-radius: 22px; padding: 20px; margin-bottom: 18px; box-shadow: 0 4px 16px rgba(232, 93, 26, 0.07); }
+    .banner-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+    .action-label { color: var(--orange); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+    .banner-headline { font-size: 18px; font-weight: 800; line-height: 1.35; margin: 0; color: var(--text); letter-spacing: -0.015em; }
+    .temp-pill-box { background: #FFFFFF; border: 1px solid #FED7AA; border-radius: 16px; padding: 10px 14px; text-align: right; flex-shrink: 0; box-shadow: var(--shadow-sm); }
+    .temp-pill-val { color: var(--red); font-size: 18px; font-weight: 700; }
+    .temp-pill-sub { color: var(--muted); font-size: 11px; margin-top: 2px; font-weight: 500; }
+    .banner-desc { font-size: 13.5px; color: var(--muted); margin: 12px 0 16px; line-height: 1.45; }
+    .btn-orange { width: 100%; background: var(--orange); color: #FFFFFF; border: none; border-radius: 999px; padding: 13px 18px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 150ms, transform 100ms; box-shadow: 0 2px 8px rgba(232, 93, 26, 0.25); }
+    .btn-orange:hover { background: var(--orange-hover); }
+    .btn-orange:active { transform: scale(0.99); }
+
+    /* Section Headings */
+    .sec-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .sec-head h2 { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+    .sec-meta { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+    /* List Rows */
+    .list-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 8px; border-bottom: 1px solid #F1F5F9; cursor: pointer; gap: 12px; border-radius: 12px; transition: background 120ms; }
+    .list-row:hover { background: var(--surface-soft); }
+    .list-row:last-child { border-bottom: none; }
+    .row-icon { width: 36px; height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .row-icon.warn { background: #FFF7ED; color: var(--orange); border: 1px solid #FFEDD5; }
+    .row-icon.info { background: var(--blue-bg); color: var(--blue); border: 1px solid #DBEAFE; }
+    .row-icon.ok { background: var(--green-bg); color: var(--green); border: 1px solid #DCFCE7; }
+    .row-icon.neutral { background: #F1F5F9; color: var(--muted); }
+    .row-main { flex: 1; min-width: 0; }
+    .row-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+    /* Status Badges */
+    .badge { padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .badge.high { background: var(--red-bg); color: var(--red); }
+    .badge.medium { background: #FFF7ED; color: var(--orange); }
+    .badge.progress { background: var(--blue-bg); color: var(--blue); }
+    .badge.neutral { background: #F1F5F9; color: #334155; }
+    .badge.ok { background: var(--green-bg); color: var(--green); }
+
+    /* 4-Stage Stepper */
+    .stepper { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 16px; position: relative; text-align: center; }
+    .step { position: relative; z-index: 1; }
+    .step-line { position: absolute; top: 10px; left: 12%; right: 12%; height: 2px; background: #E2E8F0; z-index: 0; }
+    .step-dot { width: 22px; height: 22px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #FFFFFF; border: 2px solid #CBD5E1; color: transparent; transition: all 200ms; }
+    .step.done .step-dot { background: var(--blue); border-color: var(--blue); color: #FFFFFF; }
+    .step.current .step-dot { border-color: var(--orange); background: #FFFFFF; box-shadow: 0 0 0 4px #FFEDD5; }
+    .step-label { font-size: 11px; color: var(--muted); font-weight: 500; }
+    .step.current .step-label { color: var(--text); font-weight: 700; }
+
+    /* Batches Tab Elements */
+    .seg-bar { display: grid; grid-template-columns: repeat(4, 1fr); background: #F1F5F9; padding: 4px; border-radius: 14px; margin-bottom: 16px; }
+    .seg-btn { border: none; background: transparent; padding: 8px 6px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 150ms; }
+    .seg-btn.active { background: #FFFFFF; color: var(--text); box-shadow: var(--shadow-sm); }
+    .kpi-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (min-width: 600px) { .kpi-4 { grid-template-columns: repeat(4, 1fr); } }
+    .kpi-mini { background: var(--surface-soft); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+    .kpi-mini .num { font-size: 20px; font-weight: 800; margin: 4px 0 2px; }
+    .kpi-mini .lbl { font-size: 11.5px; color: var(--muted); font-weight: 500; }
+    .unit-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .unit-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 14px; cursor: pointer; transition: all 150ms; box-shadow: var(--shadow-sm); }
+    .unit-card:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .unit-temp { font-size: 22px; font-weight: 800; margin: 8px 0 4px; }
+
+    /* Investigation Progress Bar */
+    .prog-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; gap: 4px; margin: 14px 0; }
+    .prog-seg { height: 100%; border-radius: 4px; }
+
+    /* Detail Top Nav */
+    .detail-nav { display: flex; align-items: center; gap: 12px; padding: 18px 24px 10px; }
+    .back-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); font-size: 20px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); }
+    .detail-actions { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 10px; margin: 12px 0 16px; }
+    @media (max-width: 540px) { .detail-actions { grid-template-columns: 1fr 1fr; } }
+    .btn-ask-ai { background: #FFFFFF; border: 1px solid var(--border); color: var(--text); border-radius: 999px; padding: 12px 14px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: var(--shadow-sm); transition: all 150ms; }
+    .btn-ask-ai:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* Sub-tabs in Investigation Detail */
+    .sub-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 14px; gap: 20px; overflow-x: auto; }
+    .sub-tab { background: none; border: none; padding: 9px 2px; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .sub-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* AI Card */
+    .ai-card { background: linear-gradient(180deg, #F8FAFF 0%, #FFFFFF 100%); border: 1px solid #BFDBFE; border-radius: 18px; padding: 16px; margin-top: 14px; box-shadow: var(--shadow-sm); }
+    .ai-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+    .ai-chip { background: #EFF6FF; color: var(--blue); font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: var(--muted); font-weight: 600; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 8px; border-bottom: 1px solid #F1F5F9; }
+
+    /* Modal / Bottom Sheet */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.48); backdrop-filter: blur(2px); display: none; align-items: flex-end; justify-content: center; z-index: 60; }
+    @media (min-width: 768px) { .modal-backdrop { align-items: center; } .bottom-sheet { border-radius: 24px !important; } }
+    .modal-backdrop.open { display: flex; }
+    .bottom-sheet { width: 100%; max-width: 520px; background: #FFFFFF; border-radius: 24px 24px 0 0; padding: 22px; max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: slideUp 180ms ease-out; }
+    @keyframes slideUp { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .sheet-handle { width: 40px; height: 4px; background: #CBD5E1; border-radius: 999px; margin: 0 auto 14px; }
+    .staff-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 8px; cursor: pointer; transition: all 120ms; }
+    .staff-row:hover { background: var(--surface-soft); }
+    .staff-row.selected { border-color: var(--orange); background: #FFF7ED; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: #E2E8F0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #1E293B; }
+
+    /* Toast Notification */
+    .toast { position: fixed; bottom: 86px; left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg); z-index: 80; display: none; align-items: center; gap: 8px; }
+    @media (min-width: 960px) { .toast { bottom: 28px; } }
+    .toast.show { display: flex; }
+
+    /* Footer synthetic pill & Bottom Tab Bar */
+    .synth-footer { text-align: center; font-size: 11px; color: var(--muted); padding: 12px 0 18px; letter-spacing: 0.05em; font-weight: 700; }
+    .synth-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); margin-right: 6px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px); border-top: 1px solid var(--border); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 0 10px; z-index: 40; }
+    .tab-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; }
+    .tab-btn.active { color: var(--blue); }
+    .tab-icon { font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <!-- Desktop Left Navigation Rail -->
+    <aside class="sidebar">
+      <div>
+        <div class="side-brand">
+          <div class="snowflake">❄️</div>
+          <div>
+            <div style="font-weight:800; font-size:17px; letter-spacing:-0.02em;">ColdTrace</div>
+            <div style="font-size:11.5px; color:var(--muted);">Cold Chain Alerts</div>
+          </div>
+        </div>
+        <button class="side-nav-btn active" id="snav-home" onclick="switchTab('home')"><span>⚠️ Command Home</span></button>
+        <button class="side-nav-btn" id="snav-batches" onclick="switchTab('batches')"><span>📦 Batches &amp; Units</span><span class="pill-counter" id="sideFlagCount">3</span></button>
+        <button class="side-nav-btn" id="snav-investigations" onclick="switchTab('investigations')"><span>🔍 Investigations</span></button>
+        <button class="side-nav-btn" id="snav-quality" onclick="switchTab('quality')"><span>📊 Quality &amp; Audit</span></button>
+      </div>
+      <div style="background:var(--surface-soft); border:1px solid var(--border); border-radius:16px; padding:14px; font-size:12px;">
+        <div style="font-weight:700; color:var(--text);">Telemetry Source</div>
+        <div class="mono" style="font-size:11px; color:var(--muted); margin-top:4px; word-break:break-all;" id="datasetLabel">cold_chain_labeled_2022_2026.csv</div>
+        <button class="btn-orange" style="margin-top:12px; padding:9px 12px; font-size:12.5px;" onclick="replay14d()">⚡ Replay CSV Feed</button>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <!-- Persistent Top Header -->
+      <div id="mainHeader">
+        <div class="top-bar">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="snowflake" style="display:flex;">❄️</div>
+            <div>
+              <h1 class="brand-title">Cold Chain Alerts</h1>
+              <p class="brand-sub" id="headerSub">3 batches affected • 12 units</p>
+            </div>
+          </div>
+          <div class="top-actions">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input id="globalSearch" type="text" placeholder="Search batch, unit, INV..." oninput="handleSearch(this.value)" />
+            </div>
+            <div class="mascot" onclick="toggleConfig()" title="API Key & CSV Replay Controls">🐻‍❄️</div>
+          </div>
+        </div>
+
+        <div class="config-drawer" id="configDrawer">
+          <span style="font-size:12px; font-weight:600; color:var(--muted);">X-API-Key:</span>
+          <input id="apiKey" type="password" value="change-me-local-only" placeholder="X-API-Key" />
+          <button class="badge progress" style="border:none; cursor:pointer; padding:7px 12px;" onclick="replay14d()">Replay CSV Feed</button>
+          <button class="badge neutral" style="border:none; cursor:pointer; padding:7px 12px;" onclick="refreshAll()">Sync Now</button>
+        </div>
+      </div>
+
+      <!-- SCREEN 1: HOME -->
+      <div id="screen-home" class="screen">
+        <div class="alert-banner">
+          <div class="banner-top">
+            <div>
+              <div class="action-label">⚠️ Action required</div>
+              <p class="banner-headline" id="bannerHeadline">Batches 7F-442, 8A-118, 9C-301 exceeded temperature threshold</p>
+            </div>
+            <div class="temp-pill-box">
+              <div class="temp-pill-val mono" id="bannerPeak">🌡 8.4°C</div>
+              <div class="temp-pill-sub">Threshold ≤ 2°C</div>
+            </div>
+          </div>
+          <p class="banner-desc" id="bannerDesc">Storage units JHB-DC01, DBN-DC02 and CPT-DC03 are out of range. Investigations have been initiated.</p>
+          <button class="btn-orange" onclick="switchTab('batches')">⚡ View affected batches &nbsp;›</button>
+        </div>
+
+        <div class="home-grid">
+          <div class="card">
+            <div class="sec-head">
+              <h2>Today's tasks</h2>
+              <span class="sec-meta" id="tasksRemaining">4 remaining ›</span>
+            </div>
+            <div id="tasksList"></div>
+          </div>
+
+          <div>
+            <div class="sec-head">
+              <h2>Affected batches</h2>
+              <span class="sec-meta" id="affectedCount">3 of 5 ›</span>
+            </div>
+            <div id="homeBatchesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 2: BATCHES -->
+      <div id="screen-batches" class="screen" style="display:none;">
+        <h2 style="font-size:24px; font-weight:800; margin:4px 0 4px;">Batches</h2>
+        <p style="font-size:13px; color:var(--muted); margin:0 0 16px;">Sensor readings, batches and shipments in one place, per storage unit.</p>
+
+        <div class="card">
+          <div class="sec-head">
+            <span style="font-weight:700; font-size:15px;">All batches</span>
+            <span style="font-size:12px; color:var(--muted);">☰ Filter</span>
+          </div>
+          <div class="seg-bar">
+            <button class="seg-btn active" onclick="setBatchFilter('ALL', this)">All</button>
+            <button class="seg-btn" onclick="setBatchFilter('Flagged', this)">Flagged</button>
+            <button class="seg-btn" onclick="setBatchFilter('Watch', this)">Watch</button>
+            <button class="seg-btn" onclick="setBatchFilter('Cleared', this)">Cleared</button>
+          </div>
+          <div class="kpi-4">
+            <div class="kpi-mini"><div class="lbl">📦 Batches</div><div class="num mono" id="kpiTotalB">27</div><div class="lbl">3 units</div></div>
+            <div class="kpi-mini"><div class="lbl" style="color:var(--red);">▲ Out of range</div><div class="num mono" id="kpiFlaggedB">3</div><div class="lbl">Above 2°C</div></div>
+            <div class="kpi-mini"><div class="lbl" style="color:var(--blue);">👁 Monitoring</div><div class="num mono">4</div><div class="lbl">Near limit</div></div>
+            <div class="kpi-mini"><div class="lbl">🚚 Held</div><div class="num mono">3</div><div class="lbl">Shipments</div></div>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h2>Storage locations</h2>
+          <span class="sec-meta">Tap unit to simulate fault</span>
+        </div>
+        <div class="unit-grid" id="storageUnitsGrid"></div>
+
+        <div class="sec-head">
+          <h2 id="batchListHeading">Batches</h2>
+          <div style="display:flex; gap:6px;">
+            <button class="badge neutral" id="sortHottest" style="border:1px solid var(--border); cursor:pointer;" onclick="setBatchSort('hottest')">Hottest</button>
+            <button class="badge" id="sortNewest" style="background:transparent; color:var(--muted); border:none; cursor:pointer;" onclick="setBatchSort('newest')">Newest</button>
+          </div>
+        </div>
+        <div id="batchesList"></div>
+      </div>
+
+      <!-- SCREEN 3: INVESTIGATIONS -->
+      <div id="screen-investigations" class="screen" style="display:none;">
+        <h2 style="font-size:24px; font-weight:800; margin:4px 0 4px;">Investigations</h2>
+        <p style="font-size:13px; color:var(--muted); margin:0 0 16px;">Track open incidents, assign team members, and review the audit log to closure.</p>
+
+        <div class="kpi-4" style="grid-template-columns: repeat(3, 1fr); margin-bottom:16px;">
+          <div class="card" style="margin:0; padding:14px;"><div class="lbl" style="color:var(--orange);">! Open</div><div class="num mono" id="invOpenCount">3</div><div class="lbl">active cases</div></div>
+          <div class="card" style="margin:0; padding:14px;"><div class="lbl" style="color:var(--blue);">👥 Assigned</div><div class="num mono">3</div><div class="lbl">team leads</div></div>
+          <div class="card" style="margin:0; padding:14px;"><div class="lbl">🕒 Avg. close</div><div class="num mono">1h 42m</div><div class="lbl">resolution</div></div>
+        </div>
+
+        <div class="card">
+          <div class="sec-head">
+            <span style="font-weight:700; font-size:15px;">Investigation progress</span>
+            <span class="sec-meta">This week</span>
+          </div>
+          <div class="prog-bar">
+            <div class="prog-seg" style="width:28%; background:var(--orange);"></div>
+            <div class="prog-seg" style="width:26%; background:var(--blue);"></div>
+            <div class="prog-seg" style="width:24%; background:#93C5FD;"></div>
+            <div class="prog-seg" style="width:22%; background:#CBD5E1;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); flex-wrap:wrap; gap:6px;">
+            <span><b style="color:var(--orange);">●</b> Open 1</span>
+            <span><b style="color:var(--blue);">●</b> In progress 1</span>
+            <span><b style="color:#93C5FD;">●</b> Under review 1</span>
+            <span><b style="color:#94A3B8;">●</b> Closed 1</span>
+          </div>
+        </div>
+
+        <div class="sec-head">
+          <h2>Open investigations</h2>
+          <span class="sec-meta" id="invIncidentCount">3 incidents</span>
+        </div>
+        <div id="investigationsList"></div>
+      </div>
+
+      <!-- SCREEN 4: DETECTION QUALITY & AUDIT -->
+      <div id="screen-quality" class="screen" style="display:none;">
+        <h2 style="font-size:24px; font-weight:800; margin:4px 0 4px;">Detection Quality &amp; Evidence Audit</h2>
+        <p style="font-size:13px; color:var(--muted); margin:0 0 16px;">Synthetic benchmark performance and tamper-evident SHA-256 verification.</p>
+
+        <div class="card">
+          <div class="sec-head">
+            <h2>Model Benchmark (2022–2026 Synthetic Dataset)</h2>
+            <span class="badge neutral">283 labeled events</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Detector</th><th>Macro-F1</th><th>Event Recall</th><th>Excursion TTD</th><th>False Alerts / Loc-Day</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fixed Threshold (&gt;8 °C)</td><td class="mono">0.284</td><td class="mono">4.9%</td><td class="mono">—</td><td class="mono">0.024</td></tr>
+              <tr><td>SOP Rules Baseline</td><td class="mono">0.726</td><td class="mono">83.7%</td><td class="mono">1.5 h</td><td class="mono">0.088</td></tr>
+              <tr style="background:var(--blue-bg); font-weight:700;"><td>Random Forest (Active)</td><td class="mono" style="color:var(--blue);">0.810</td><td class="mono" style="color:var(--green);">94.3%</td><td class="mono">0.5 h</td><td class="mono">0.106</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="sec-head">
+            <h2>SHA-256 Tamper-Evident Evidence Vault</h2>
+            <span class="sec-meta">Cryptographic audit trail</span>
+          </div>
+          <div id="evidenceVaultList"></div>
+        </div>
+      </div>
+
+      <!-- SCREEN 5: BATCH DETAIL -->
+      <div id="screen-batch-detail" class="screen" style="display:none; padding:0;">
+        <div class="detail-nav">
+          <button class="back-btn" onclick="goBackFromDetail()">‹</button>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h2 style="margin:0; font-size:22px; font-weight:800;" id="bdCode">7F-442</h2>
+              <span class="badge high" id="bdStatusBadge">Out of range</span>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:2px;" id="bdSubtitle">Pharmaceuticals • Insulin pens</div>
+          </div>
+        </div>
+        <div style="padding:8px 24px 20px;" id="batchDetailBody"></div>
+      </div>
+
+      <!-- SCREEN 6: INVESTIGATION DETAIL -->
+      <div id="screen-inv-detail" class="screen" style="display:none; padding:0;">
+        <div class="detail-nav">
+          <button class="back-btn" onclick="switchTab('investigations')">‹</button>
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <h2 style="margin:0; font-size:22px; font-weight:800;" id="idCode">7F-442</h2>
+              <span style="color:var(--orange); font-weight:700; font-size:14px;" id="idState">Open</span>
+            </div>
+            <div style="font-size:13px; color:var(--muted); margin-top:2px;" id="idSubtitle">INV-2048 • Unit 12</div>
+          </div>
+        </div>
+        <div style="padding:4px 24px 20px;" id="invDetailBody"></div>
+      </div>
+
+      <div class="synth-footer"><span class="synth-dot"></span>SYNTHETIC DATA • SIMULATED SENSORS</div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Tab Bar -->
+  <nav class="bottom-nav">
+    <button class="tab-btn active" id="tab-home" onclick="switchTab('home')"><span class="tab-icon">⚠️</span><span>Home</span></button>
+    <button class="tab-btn" id="tab-batches" onclick="switchTab('batches')"><span class="tab-icon">📦</span><span>Batches</span></button>
+    <button class="tab-btn" id="tab-investigations" onclick="switchTab('investigations')"><span class="tab-icon">🔍</span><span>Investigations</span></button>
+    <button class="tab-btn" id="tab-quality" onclick="switchTab('quality')"><span class="tab-icon">📊</span><span>Quality</span></button>
+  </nav>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toastMsg">✓ Updated</div>
+
+  <!-- MODAL 1: SIMULATE A FAILURE SHEET -->
+  <div class="modal-backdrop" id="simModal" onclick="if(event.target===this) closeSimModal()">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="simLocLabel">STORAGE LOCATION</div>
+          <h2 style="margin:4px 0 2px; font-size:22px; font-weight:800;" id="simUnitTitle">Unit 14</h2>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--muted);" id="simUnitSub">Threshold ≤ 2°C</p>
+        </div>
+        <button class="badge neutral" style="border:none; cursor:pointer;" onclick="closeSimModal()">✕</button>
+      </div>
+      <div class="card" style="background:var(--surface-soft);" id="simChartBox"></div>
+      <h3 style="font-size:15px; margin:14px 0 4px;">Simulate a failure</h3>
+      <p style="font-size:12px; color:var(--muted); margin:0 0 12px;">Synthetic sensors spike, affected batches are flagged, shipments are held and an investigation opens.</p>
+      <div class="card" style="padding:4px 14px;">
+        <div class="list-row" onclick="triggerFault('TEMP_EXCURSION')">
+          <div class="row-icon warn">🌡</div>
+          <div class="row-main"><div class="row-title">Temperature excursion</div><div class="row-sub">Slow drift above 2°C over 12 hours</div></div>
+          <span style="color:var(--orange); font-weight:700;">⚡</span>
+        </div>
+        <div class="list-row" onclick="triggerFault('COOLING_FAILURE')">
+          <div class="row-icon warn">❄️</div>
+          <div class="row-main"><div class="row-title">Compressor failure</div><div class="row-sub">Cooling stops, sharp rise over 18 hours</div></div>
+          <span style="color:var(--orange); font-weight:700;">⚡</span>
+        </div>
+        <div class="list-row" onclick="triggerFault('SENSOR_DROPOUT')">
+          <div class="row-icon warn">🚪</div>
+          <div class="row-main"><div class="row-title">Door left open</div><div class="row-sub">Short warm spike, sensor connectivity drop</div></div>
+          <span style="color:var(--orange); font-weight:700;">⚡</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: ASSIGN INVESTIGATION SHEET -->
+  <div class="modal-backdrop" id="assignModal" onclick="if(event.target===this) closeAssignModal()">
+    <div class="bottom-sheet">
+      <div class="sheet-handle"></div>
+      <div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="assignStepLabel">STEP 1 OF 3</div>
+      <h2 style="margin:4px 0 2px; font-size:20px; font-weight:800;">Assign investigation</h2>
+      <p style="margin:0 0 12px; font-size:13px; color:var(--muted);">Who checks the unit and the flagged stock?</p>
+      <div id="staffList"></div>
+      <div style="font-size:12px; color:var(--muted); margin:10px 0 6px;">Handoff note (logged with a timestamp)</div>
+      <input id="handoffNote" placeholder="What should they check first?" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; font-size:13px;" />
+      <button class="btn-orange" onclick="submitAssignment()">Assign</button>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

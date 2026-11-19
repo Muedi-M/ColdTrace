@@ -1,8 +1,9 @@
+from __future__ import annotations
+from fastapi.staticfiles import StaticFiles
 """FastAPI service for Cloud Run.  uvicorn coldtrace.api:app --host 0.0.0.0 --port 8080
 
 Env: MODEL_PATH, INGEST_API_KEY (required), NVIDIA_API_KEY | NIM_SECRET_NAME, NIM_MODEL.
 """
-from __future__ import annotations
 
 import hmac
 import os
@@ -14,7 +15,13 @@ from pydantic import BaseModel, Field
 from . import nim
 from .service import LOCATIONS, Detector
 
+from pathlib import Path
 app = FastAPI(title="ColdTrace", version="0.1.0")
+
+from coldtrace.security import SecurityHardeningMiddleware, verify_model_artifacts
+app.add_middleware(SecurityHardeningMiddleware)
+verify_model_artifacts(Path(__file__).resolve().parent.parent / "artifacts")
+
 _state: dict = {"det": None, "alerts": {}, "nim": None}
 
 
@@ -76,3 +83,293 @@ def explain(alert_id: str):
         # detection result stays valid; only the narrative is unavailable
         raise HTTPException(503, f"NIM unavailable: {type(e).__name__}")
     return {"alert_id": alert_id, "evidence_sha256": alert.evidence_sha256, "explanation": out}
+
+# --- Operations Console UI & Dashboard Endpoints ---
+from pathlib import Path
+import csv
+from fastapi.responses import HTMLResponse
+
+_latest_readings: dict[str, dict] = {}
+_reading_counts: dict[str, int] = {"JHB-DC01": 0, "DBN-DC02": 0, "CPT-DC03": 0}
+
+app.mount("/static", StaticFiles(directory=Path(__file__).resolve().parent.parent / "frontend"), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+def serve_dashboard():
+    html_path = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
+    return html_path.read_text(encoding="utf-8") if html_path.exists() else "<h1>ColdTrace API</h1>"
+
+@app.get("/api/locations")
+def list_locations():
+    cities = {"JHB-DC01": "Johannesburg", "DBN-DC02": "Durban", "CPT-DC03": "Cape Town"}
+    out = []
+    for loc_id, city in cities.items():
+        loc_alerts = [a for a in _state["alerts"].values() if a.location_id == loc_id and getattr(a, "state", "OPEN") != "CLOSED"]
+        latest = _latest_readings.get(loc_id)
+        status = "exception" if loc_alerts else ("warming_up" if _reading_counts.get(loc_id, 0) < 50 else "ok")
+        out.append({"id": loc_id, "city": city, "status": status, "open_alerts": len(loc_alerts), "latest": latest})
+    return {"locations": out}
+
+@app.get("/api/alerts")
+def list_alerts():
+    items = []
+    for a in _state["alerts"].values():
+        d = a.to_case_json()
+        d.setdefault("state", getattr(a, "state", "OPEN"))
+        items.append(d)
+    return {"alerts": list(reversed(items))}
+
+@app.post("/api/alerts/{alert_id}/ack", dependencies=[Depends(require_key)])
+def ack_alert(alert_id: str):
+    alert = _state["alerts"].get(alert_id)
+    if not alert:
+        raise HTTPException(404, "unknown alert")
+    alert.state = "ACKNOWLEDGED"
+    return {"status": "acknowledged", "alert_id": alert_id}
+
+@app.post("/api/alerts/{alert_id}/close", dependencies=[Depends(require_key)])
+def close_alert(alert_id: str):
+    alert = _state["alerts"].get(alert_id)
+    if not alert:
+        raise HTTPException(404, "unknown alert")
+    alert.state = "CLOSED"
+    return {"status": "closed", "alert_id": alert_id}
+
+@app.post("/api/demo/replay", dependencies=[Depends(require_key)])
+def trigger_demo_replay():
+    csv_path = Path(__file__).resolve().parent.parent / "data" / "sample_14d.csv"
+    if not csv_path.exists():
+        raise HTTPException(404, "sample_14d.csv not found")
+    with csv_path.open("r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            loc = row["Storage_Location_ID"]
+            ev = {
+                "location_id": loc,
+                "ts": row["Timestamp"],
+                "T": float(row["Warehouse_Temperature_C"]),
+                "H": float(row["Warehouse_Humidity_Percent"]),
+                "C": float(row["Cooling_Load_Percent"]),
+                "S": float(row["Sensor_Connectivity"]),
+            }
+            _latest_readings[loc] = {"T": ev["T"], "H": ev["H"], "C": ev["C"], "S": ev["S"]}
+            _reading_counts[loc] = _reading_counts.get(loc, 0) + 1
+            det = detector().ingest(ev)
+            if det.alert:
+                _state["alerts"][det.alert.alert_id] = det.alert
+    return {"status": "replayed", "alerts_total": len(_state["alerts"])}
+
+# --- Cold Chain Alerts Video UI Endpoints (Backed by cold_chain_labeled_2022_2026.csv) ---
+import csv
+from pathlib import Path
+from fastapi import Request
+
+def _resolve_dataset_path() -> Path | None:
+    base = Path(__file__).resolve().parent.parent / "data"
+    for name in ("cold_chain_labeled_2022_2026.csv", "sample_14d.csv"):
+        p = base / name
+        if p.exists():
+            return p
+    return None
+
+def _load_csv_telemetry() -> dict[str, list[dict]]:
+    path = _resolve_dataset_path()
+    grouped: dict[str, list[dict]] = {"JHB-DC01": [], "DBN-DC02": [], "CPT-DC03": []}
+    if not path:
+        return grouped
+    with path.open("r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            loc = row.get("Storage_Location_ID") or row.get("location_id")
+            if loc not in grouped:
+                continue
+            grouped[loc].append({
+                "ts": row.get("Timestamp") or row.get("ts"),
+                "T": float(row.get("Warehouse_Temperature_C") or row.get("warehouse_temperature_c") or 0.0),
+                "H": float(row.get("Warehouse_Humidity_Percent") or row.get("warehouse_humidity_percent") or 0.0),
+                "C": float(row.get("Cooling_Load_Percent") or row.get("cooling_load_percent") or 0.0),
+                "S": float(row.get("Sensor_Connectivity") or row.get("sensor_connectivity") or 0.0),
+                "label": row.get("Exception_Type") or row.get("exception_type") or "NONE",
+            })
+    return grouped
+
+_csv_cache = _load_csv_telemetry()
+
+def _tail_series(loc: str, n: int = 14) -> list[float]:
+    rows = _csv_cache.get(loc, [])
+    if not rows:
+        return [1.2, 1.4, 1.3, 1.6, 2.1, 4.5, 6.1]
+    # Sample 14 points across the last 7 days (336 x 30-min intervals)
+    window = rows[-336:] if len(rows) >= 336 else rows
+    step = max(1, len(window) // n)
+    return [round(window[i]["T"], 1) for i in range(0, len(window), step)][:n]
+
+_ui_store = {
+    "datasetFile": _resolve_dataset_path().name if _resolve_dataset_path() else "mock",
+    "units": [
+        {"locationId": "JHB-DC01", "shortCode": "U12", "unitName": "Unit 12 (JHB-DC01)", "siteName": "Johannesburg DC • Waterfall", "temp": 8.4, "flaggedCount": 1, "invCode": "INV-2048", "warmestBatch": "7F-442", "series": _tail_series("JHB-DC01")},
+        {"locationId": "DBN-DC02", "shortCode": "U14", "unitName": "Unit 14 (DBN-DC02)", "siteName": "Durban DC • Sandton Hub", "temp": 6.1, "flaggedCount": 1, "invCode": "INV-2047", "warmestBatch": "8A-118", "series": _tail_series("DBN-DC02")},
+        {"locationId": "CPT-DC03", "shortCode": "U22", "unitName": "Unit 22 (CPT-DC03)", "siteName": "Cape Town DC • Midrand", "temp": 5.3, "flaggedCount": 1, "invCode": "INV-2046", "warmestBatch": "9C-301", "series": _tail_series("CPT-DC03")},
+    ],
+    "batches": [
+        {"code": "7F-442", "category": "Pharmaceuticals", "product": "Insulin pens", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 4, "arrived": "2026-10-28 00:30", "temp": 8.4, "peak": 8.4, "aboveHours": 18, "sensorId": "JHB-S2", "shipmentId": "SH-7713", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 4, "status": "Out of range", "stageIndex": 2, "series": _tail_series("JHB-DC01")},
+        {"code": "8A-118", "category": "Biologics", "product": "Flu vaccine vials", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 5, "arrived": "2026-10-27 12:30", "temp": 6.1, "peak": 6.1, "aboveHours": 14, "sensorId": "DBN-S1", "shipmentId": "SH-7712", "destination": "Durban North depot", "invId": "INV-2047", "invStatus": "In progress", "handoffs": 3, "status": "Out of range", "stageIndex": 2, "series": _tail_series("DBN-DC02")},
+        {"code": "9C-301", "category": "Pharmaceuticals", "product": "Eye drops", "locationSite": "Cape Town DC (CPT-DC03)", "unitName": "Unit 22", "locationId": "CPT-DC03", "units": 3, "arrived": "2026-10-26 17:30", "temp": 5.3, "peak": 5.3, "aboveHours": 12, "sensorId": "CPT-S2", "shipmentId": "SH-7769", "destination": "Cape Town Harbour pick-up", "invId": "INV-2046", "invStatus": "Under review", "handoffs": 5, "status": "Out of range", "stageIndex": 3, "series": _tail_series("CPT-DC03")},
+        {"code": "7F-451", "category": "Seafood", "product": "Hake fillets", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 9, "arrived": "2026-10-26 20:30", "temp": 1.5, "peak": 1.8, "aboveHours": 0, "sensorId": "JHB-S1", "shipmentId": "SH-7712", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 1, "status": "Monitoring", "stageIndex": 1, "series": [1.1, 1.2, 1.4, 1.3, 1.5, 1.4, 1.5]},
+        {"code": "7F-558", "category": "Bakery", "product": "Baked cheesecake", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 4, "arrived": "2026-10-25 16:30", "temp": 1.0, "peak": 1.4, "aboveHours": 0, "sensorId": "DBN-S3", "shipmentId": "SH-7724", "destination": "Midrand Hub", "invId": "INV-2045", "invStatus": "Closed", "handoffs": 2, "status": "In range", "stageIndex": 0, "series": [1.1, 1.0, 1.2, 1.1, 0.9, 1.1, 1.0]},
+    ],
+    "investigations": [
+        {
+            "id": "INV-2048", "batchCode": "7F-442", "unitName": "Unit 12 (JHB-DC01)", "reason": "COOLING_FAILURE",
+            "temp": 8.4, "units": 4, "statusText": "Unassigned", "state": "Open", "priority": "High", "age": "38m ago",
+            "assignee": "Unassigned", "shipmentId": "SH-7713", "handoffs": 4, "sha256": "9f2c41d7e0a85b36881c49a2",
+            "aiSummary": "SUMMARY\n• High-priority open investigation INV-2048 at JHB-DC01 (Unit 12).\n• Labeled dataset telemetry shows temperature drift above safe threshold with reduced cooling load.\n\nAFFECTED INVENTORY\n• 7F-442: 4 insulin pens at risk; shipment SH-7713 placed on hold.",
+            "timeline": [
+                {"icon": "🌡", "tone": "warn", "title": "Temperature rising in JHB-DC01", "detail": "Telemetry sourced from cold_chain_labeled_2022_2026.csv", "source": "Sensor JHB-S2", "time": "2026-10-28 17:30"},
+                {"icon": "⚠️", "tone": "warn", "title": "Batch 7F-442 flagged", "detail": "Exceeded safe band; shipment SH-7713 held.", "source": "RandomForest Detector", "time": "2026-10-28 20:00"},
+            ]
+        },
+        {
+            "id": "INV-2047", "batchCode": "8A-118", "unitName": "Unit 14 (DBN-DC02)", "reason": "TEMP_EXCURSION",
+            "temp": 6.1, "units": 5, "statusText": "Sipho Peters", "state": "In progress", "priority": "Medium", "age": "3h ago",
+            "assignee": "Sipho Peters", "shipmentId": "SH-7712", "handoffs": 3, "sha256": "4a036b92d7c1189e041f32b1",
+            "aiSummary": "SUMMARY\n• DBN-DC02 drifted out of band; Sipho Peters assigned to verify door seal and relocate 5 flu vaccine vials.",
+            "timeline": [
+                {"icon": "⚠️", "tone": "warn", "title": "Batch 8A-118 flagged", "detail": "Excursion detected in DBN-DC02", "source": "RandomForest Detector", "time": "2026-10-28 17:00"}
+            ]
+        },
+        {
+            "id": "INV-2046", "batchCode": "9C-301", "unitName": "Unit 22 (CPT-DC03)", "reason": "SENSOR_DROPOUT",
+            "temp": 5.3, "units": 3, "statusText": "Aisha Dlamini", "state": "Under review", "priority": "High", "age": "1d ago",
+            "assignee": "Aisha Dlamini", "shipmentId": "SH-7769", "handoffs": 5, "sha256": "7827400a5a912e4b019c77d0",
+            "aiSummary": "SUMMARY\n• Connectivity collapse and frozen readings detected at CPT-DC03; manual probe verification required for batch 9C-301.",
+            "timeline": [
+                {"icon": "⚠️", "tone": "warn", "title": "Batch 9C-301 flagged", "detail": "Sensor dropout detected in CPT-DC03", "source": "ColdChain rules", "time": "2026-10-27 20:00"}
+            ]
+        }
+    ],
+    "tasks": [
+        {"icon": "!", "badgeClass": "high", "title": "Assign INV-2048", "sub": "JHB-DC01 • Cooling failure", "badge": "High", "invId": "INV-2048"},
+        {"icon": "👤", "badgeClass": "progress", "title": "Review 8A-118 telemetry", "sub": "DBN-DC02 • Temp excursion", "badge": "In progress", "invId": "INV-2047"},
+        {"icon": "✦", "badgeClass": "neutral", "title": "AI triage INV-2047", "sub": "DBN-DC02 • NVIDIA NIM", "badge": "Next", "invId": "INV-2047"},
+        {"icon": "✓", "badgeClass": "neutral", "title": "Verify CPT-DC03 probe", "sub": "CPT-DC03 • Sensor dropout", "badge": "Pending", "invId": "INV-2046"},
+    ]
+}
+
+def _sync_csv_and_alerts_to_ui():
+    # Populate latest readings & 7-day series from cold_chain_labeled_2022_2026.csv
+    for u in _ui_store["units"]:
+        loc = u["locationId"]
+        rows = _csv_cache.get(loc, [])
+        if rows:
+            u["temp"] = round(rows[-1]["T"], 1)
+            u["series"] = _tail_series(loc)
+            b = next((x for x in _ui_store["batches"] if x["locationId"] == loc and x["status"] == "Out of range"), None)
+            if b:
+                b["temp"] = u["temp"]
+                b["peak"] = round(max(u["series"]), 1)
+                b["series"] = u["series"]
+    # Override with any newly injected or replayed live detector alerts
+    for a in _state["alerts"].values():
+        u = next((x for x in _ui_store["units"] if x["locationId"] == a.location_id), None)
+        b = next((x for x in _ui_store["batches"] if x["locationId"] == a.location_id and x["status"] == "Out of range"), None)
+        inv = next((x for x in _ui_store["investigations"] if a.location_id in x["unitName"]), None)
+        if u and a.evidence:
+            latest_t = round(float(a.evidence[-1].get("T", u["temp"])), 1)
+            u["temp"] = latest_t
+            u["series"] = (u["series"] + [latest_t])[-14:]
+            if b:
+                b["temp"] = latest_t
+                b["peak"] = max(b["peak"], latest_t)
+                b["series"] = u["series"]
+            if inv:
+                inv["temp"] = latest_t
+                inv["reason"] = a.kind
+                inv["sha256"] = a.evidence_sha256
+
+@app.get("/api/ui/state")
+def get_video_ui_state():
+    _sync_csv_and_alerts_to_ui()
+    return _ui_store
+
+@app.post("/api/demo/replay", dependencies=[Depends(require_key)])
+def replay_labeled_csv():
+    path = _resolve_dataset_path()
+    if not path:
+        raise HTTPException(404, "Dataset CSV not found in Backend/data/")
+    # Replay the tail 300 rows per site (covers 24h warm-up + recent labeled anomalies)
+    count = 0
+    for loc, rows in _csv_cache.items():
+        for r in rows[-300:]:
+            ev = {"location_id": loc, "ts": r["ts"], "T": r["T"], "H": r["H"], "C": r["C"], "S": r["S"]}
+            det = detector().ingest(ev)
+            count += 1
+            if det.alert:
+                _state["alerts"][det.alert.alert_id] = det.alert
+    _sync_csv_and_alerts_to_ui()
+    return {"status": "replayed", "source": path.name, "rows_processed": count, "alerts_total": len(_state["alerts"])}
+
+@app.post("/api/ui/investigations/{inv_id}/assign", dependencies=[Depends(require_key)])
+async def assign_video_investigation(inv_id: str, req: Request):
+    body = await req.json()
+    assignee = body.get("assignee", "Naledi Mokoena")
+    note = body.get("note", "")
+    inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
+    if not inv:
+        raise HTTPException(404, "unknown investigation")
+    inv["assignee"] = assignee
+    inv["statusText"] = assignee
+    inv["state"] = "In progress"
+    inv["handoffs"] += 1
+    inv["timeline"].insert(0, {
+        "icon": "👤", "tone": "info",
+        "title": f"Assigned to {assignee}",
+        "detail": note,
+        "source": "Operations Lead",
+        "time": "Just now"
+    })
+    return {"status": "assigned", "inv_id": inv_id, "assignee": assignee}
+
+@app.post("/api/ui/investigations/{inv_id}/ask-ai", dependencies=[Depends(require_key)])
+def ask_video_ai(inv_id: str):
+    inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
+    if not inv:
+        raise HTTPException(404, "unknown investigation")
+    live_alerts = list(_state["alerts"].values())
+    if live_alerts:
+        try:
+            if _state["nim"] is None:
+                _state["nim"] = nim.NimClient()
+            out = nim.explain(_state["nim"], os.getenv("NIM_MODEL", nim.DEFAULT_MODELS[0]), live_alerts[-1].to_case_json())
+            note_obj = out.get("note", out)
+            if isinstance(note_obj, dict):
+                formatted = (
+                    f"SUMMARY\n• {note_obj.get('summary', '')}\n• Likely cause: {note_obj.get('likely_cause', '')}\n\n"
+                    f"AFFECTED INVENTORY\n• {note_obj.get('batches_at_risk', inv['batchCode'])}\n\n"
+                    f"RECOMMENDED ACTIONS\n" + "\n".join(f"• {a}" for a in note_obj.get("recommended_actions", []))
+                )
+            else:
+                formatted = str(note_obj)
+            inv["aiSummary"] = formatted
+            return {"status": "ok", "narrative": formatted}
+        except Exception as e:
+            return {"status": "fallback", "narrative": inv["aiSummary"] + f"\n\n(NIM note: {type(e).__name__})"}
+    return {"status": "ok", "narrative": inv["aiSummary"]}
+
+@app.post("/api/ui/investigations/{inv_id}/resolve", dependencies=[Depends(require_key)])
+def resolve_video_investigation(inv_id: str):
+    inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
+    if not inv:
+        raise HTTPException(404, "unknown investigation")
+    inv["state"] = "Closed"
+    inv["statusText"] = "Resolved"
+    inv["timeline"].insert(0, {
+        "icon": "✓", "tone": "ok",
+        "title": "Investigation resolved & closed",
+        "detail": "Disposition recorded and evidence hash archived.",
+        "source": "QA Reviewer",
+        "time": "Just now"
+    })
+    b = next((x for x in _ui_store["batches"] if x["invId"] == inv_id), None)
+    if b:
+        b["stageIndex"] = 3
+        b["invStatus"] = "Closed"
+    return {"status": "resolved", "inv_id": inv_id}
