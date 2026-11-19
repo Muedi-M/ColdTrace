@@ -39,4 +39,4 @@ def test_reject_future_timestamp_and_out_of_range():
         "cooling_load_percent": 50.0,
         "sensor_connectivity": 99.0,
     })
-    assert res.status_code == 422
+    assert res.status_code == 422, res.text
