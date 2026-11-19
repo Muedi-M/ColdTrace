@@ -87,7 +87,7 @@ def explain(alert_id: str):
 # --- Operations Console UI & Dashboard Endpoints ---
 from pathlib import Path
 import csv
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 _latest_readings: dict[str, dict] = {}
 _reading_counts: dict[str, int] = {"JHB-DC01": 0, "DBN-DC02": 0, "CPT-DC03": 0}
@@ -373,3 +373,8 @@ def resolve_video_investigation(inv_id: str):
         b["stageIndex"] = 3
         b["invStatus"] = "Closed"
     return {"status": "resolved", "inv_id": inv_id}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(Path(__file__).resolve().parent / "static" / "favicon.ico", media_type="image/x-icon")
