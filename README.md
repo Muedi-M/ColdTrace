@@ -29,7 +29,8 @@ ColdTrace monitors refrigerated storage facilities in real time, detects tempera
 12. [Google Cloud Run Deployment](#12-google-cloud-run-deployment)
 13. [API Reference](#13-api-reference)
 14. [Security & Design Guardrails](#14-security--design-guardrails)
-15. [Ownership Summary (RACI)](#15-ownership-summary-raci)
+15. [DevSecOps: Secret, Dependency, SAST & DAST Checks](#15-devsecops-secret-dependency-sast--dast-checks)
+16. [Ownership Summary (RACI)](#16-ownership-summary-raci)
 
 ---
 
@@ -122,7 +123,15 @@ coldtrace/
 ├── README.md               # Project overview, team & setup guide
 ├── env.example             # Sample environment variables (never commit .env)
 ├── terraform/              # Infrastructure as Code (project, IAM, WIF, budget, services)
-├── .github/workflows/      # GitHub Actions CI/CD (WIF keyless deploy)
+├── .gitleaks.toml          # Gitleaks config (allowlist for dummy placeholders)
+├── .github/
+│   ├── dependabot.yml      # Weekly dependency update PRs (pip, Actions, Terraform)
+│   └── workflows/
+│       ├── ci-deploy.yml        # Tests, Terraform validate, WIF deploy to Cloud Run
+│       ├── codeql.yml           # SAST (CodeQL: Python + Actions)
+│       ├── secret-scan.yml      # Gitleaks secret scanning
+│       ├── dependency-audit.yml # pip-audit + dependency review
+│       └── dast.yml             # OWASP ZAP baseline + API scan
 └── Backend/
     ├── coldtrace/
     │   ├── api.py          # FastAPI server, dashboard routes, auth & NIM endpoints
@@ -174,12 +183,12 @@ coldtrace/
 
 | Member | Role | Primary focus |
 |---|---|---|
-| **Moorthy R** | DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
+| **Moorthy R** | Lead DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
 | **Chantell Ntokozo** | Data Analyst | BigQuery data loading, partition-aware querying, telemetry validation |
 | **Mbambala T** | AI & Cloud Foundation Engineer | AI/ML pipeline, container builds, Cloud Run, Pub/Sub, Scheduler, Firestore |
 | **Dr. Peter Opiyo** | Cyber Security Reviewer | Read-only audit of IAM, WIF, logs, monitoring and evidence integrity |
 
-### 5.1 DevOps & Cloud Owner — Moorthy R
+### 5.1 Lead DevOps & Cloud Owner — Moorthy R
 
 **Contact:** `moorthyrtmp@gmail.com`
 
@@ -303,6 +312,77 @@ git push ──► GitHub Actions ──► OIDC token ──► Workload Identi
 - **Terraform** is the single source of truth for APIs, service accounts, IAM bindings, WIF, budget alerts and Cloud Run guardrails.
 - Secrets are rotated in **Secret Manager**; Cloud Run reads the latest version at runtime.
 - Dr. Peter Opiyo periodically reviews the Terraform-declared IAM and WIF rules against the live project state.
+
+### 7.1 Pipeline stages
+
+Every push and pull request fans out into five independent workflows. The deploy job runs only on `main`, after the test job passes. Branch protection (7.4) makes the other four required before a pull request can merge.
+
+```mermaid
+flowchart LR
+    PR[Pull request or push] --> T[ci-deploy.yml<br/>tests + terraform validate]
+    PR --> C[codeql.yml<br/>SAST]
+    PR --> S[secret-scan.yml<br/>Gitleaks]
+    PR --> D[dependency-audit.yml<br/>pip-audit + dependency review]
+    PR --> Z[dast.yml<br/>OWASP ZAP]
+    T --> G{Required checks green?}
+    C --> G
+    S --> G
+    D --> G
+    Z --> G
+    G -->|merge to main| DEP[ci-deploy.yml deploy job<br/>WIF to Artifact Registry to Cloud Run]
+```
+
+### 7.2 Workflow catalogue
+
+| Workflow file | Triggers | What it does | Blocks merge? | Owner |
+|---|---|---|---|---|
+| `ci-deploy.yml` | push to `main`, pull request, manual | Runs `pytest`, Terraform `fmt`/`validate`, then (on `main`) builds, pushes and deploys through WIF | Yes (`test-and-validate`) | Moorthy R |
+| `codeql.yml` | push, pull request, weekly | CodeQL SAST for Python and GitHub Actions workflows (`security-extended` queries) | Yes | Dr. Peter Opiyo (triage) |
+| `secret-scan.yml` | push, pull request, weekly | Gitleaks scan of the full git history for committed secrets | Yes | Moorthy R / Dr. Peter Opiyo |
+| `dependency-audit.yml` | push, pull request, weekly | `pip-audit` on `Backend/requirements.txt`; dependency review on pull requests (fails on high severity) | Yes | Moorthy R |
+| `dast.yml` | pull request, weekly, manual | Starts the API on the runner and scans it with OWASP ZAP (baseline + OpenAPI scan) | Report-only at first, then yes | Dr. Peter Opiyo |
+| `dependabot.yml` | weekly | Opens update pull requests for pip, GitHub Actions and Terraform providers | n/a | Moorthy R |
+
+### 7.3 GitHub secrets used by the pipeline
+
+| Secret (Settings → Secrets and variables → Actions) | Used by | Notes |
+|---|---|---|
+| `GCP_PROJECT_ID` | deploy job | Project identifier; not a credential, but kept as a secret to avoid exposing infrastructure details. |
+| `GCP_WIF_PROVIDER` | deploy job | Full Workload Identity Provider resource name. |
+| `GCP_CICD_SA` | deploy job | Email of `coldtrace-cicd-sa`. |
+
+- There is **no service-account JSON key** in GitHub or anywhere else. Authentication is a short-lived OIDC token exchanged through WIF.
+- `INGEST_API_KEY` and `NVIDIA_API_KEY` for production live in **Secret Manager**, never in GitHub.
+- The values `change-me-local-only` and `dummy-key-for-tests` that appear in test workflows and tests are dummy placeholders with no access to anything.
+- The security workflows run with `permissions: contents: read` by default. Only CodeQL gets `security-events: write`, and only the dependency review job gets `pull-requests: write`.
+
+### 7.4 Branch protection (Settings → Branches → rule for `main`)
+
+Enable:
+- Require a pull request before merging.
+- Require status checks to pass: `test-and-validate`, `analyze (python)`, `analyze (actions)`, `gitleaks`, `pip-audit`, `dependency-review`. Add `zap-scan` once DAST is switched from report-only to blocking.
+- Require branches to be up to date before merging.
+- Block force pushes and deletions.
+
+Owner: Moorthy R. Reviewer: Dr. Peter Opiyo.
+
+### 7.5 Lock down the Workload Identity trust rule
+
+Restrict the provider so only this repository (and optionally only `main`) can impersonate `coldtrace-cicd-sa`. In Terraform (illustrative, adapt to the real resource names):
+
+```hcl
+resource "google_iam_workload_identity_pool_provider" "github" {
+  # ...existing arguments...
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+    "attribute.ref"        = "assertion.ref"
+  }
+  attribute_condition = "assertion.repository == 'Muedi-M/ColdTrace'"
+}
+```
+
+Dr. Peter Opiyo reviews this condition as part of the WIF audit.
 
 ---
 
@@ -488,11 +568,128 @@ curl -X POST http://localhost:8000/ingest \
 - **Least privilege:** The runtime service account and every human role are scoped to the minimum required; the security reviewer is strictly read-only.
 - **Secrets:** Stored in Secret Manager and injected at runtime; engineers hold `secretmanager.viewer` (metadata) only, never raw values.
 - **Auditability:** Cloud Audit Logs and Cloud Monitoring alerts are reviewed by the Cyber Security Reviewer.
+- **Automated security testing:** secret scanning, dependency audits, CodeQL SAST and OWASP ZAP DAST run on every pull request (see [section 15](#15-devsecops-secret-dependency-sast--dast-checks)).
 - **Persistence:** Firestore provides durable alert state across container restarts and instances. If Firestore is not configured, state falls back to in-memory and resets on cold start.
 
 ---
 
-## 15. Ownership Summary (RACI)
+## 15. DevSecOps: Secret, Dependency, SAST & DAST Checks
+
+Security checks run automatically on every pull request and weekly on `main`, so new vulnerabilities in unchanged code are still caught.
+
+### 15.1 Layers at a glance
+
+| Layer | Tool | Finds | Workflow | Where results appear |
+|---|---|---|---|---|
+| Secrets | Gitleaks + GitHub secret scanning and push protection | API keys, tokens and credentials committed to the repo | `secret-scan.yml` | Failed check, job log |
+| Dependencies | `pip-audit`, dependency review, Dependabot | Known CVEs in Python packages and risky new dependencies | `dependency-audit.yml`, `dependabot.yml` | Failed check, PR comment, Dependabot PRs |
+| SAST | CodeQL (`security-extended`) | Injection, unsafe deserialization, weak crypto, insecure workflow patterns in code | `codeql.yml` | Security → Code scanning |
+| DAST | OWASP ZAP baseline + API scan | Missing security headers, auth gaps, exposed endpoints and misconfiguration in the running app | `dast.yml` | Workflow artifacts (HTML/JSON/MD reports) |
+| Runtime | Cloud Audit Logs, Cloud Monitoring | Rejected auth, unusual access, IAM changes | Managed in GCP | Cloud Logging and Monitoring |
+
+### 15.2 Secret security
+
+**Rules**
+1. Never commit real values. `env.example` holds placeholders only; `.env` is in `.gitignore`.
+2. Production secrets (`INGEST_API_KEY`, `NVIDIA_API_KEY`) live only in **Secret Manager** and are bound to Cloud Run with `--set-secrets`.
+3. Only `coldtrace-runtime-sa` can read secret values. Engineers and the auditor hold `secretmanager.viewer` (metadata only).
+4. CI uses short-lived OIDC credentials through WIF, so there is no key file to leak.
+5. Turn on GitHub **Secret scanning** and **Push protection** (Settings → Code security) so leaks are blocked before they reach the repo. Gitleaks in CI is the second layer.
+
+**Rotation procedure** (owner: Moorthy R)
+```bash
+# 1. Create a new secret version
+printf '%s' "<NEW_VALUE>" | gcloud secrets versions add INGEST_API_KEY --data-file=-
+
+# 2. Roll out: a new Cloud Run revision reads ":latest"
+gcloud run services update coldtrace-app --region us-central1 --update-secrets INGEST_API_KEY=INGEST_API_KEY:latest
+
+# 3. After verifying, disable the old version
+gcloud secrets versions list INGEST_API_KEY
+gcloud secrets versions disable <OLD_VERSION_ID> --secret INGEST_API_KEY
+```
+
+**If a secret is leaked**
+1. Revoke or rotate it immediately (above); for the NVIDIA key, regenerate it in NGC.
+2. Check Cloud Audit Logs and Cloud Run request logs for misuse (Dr. Peter Opiyo).
+3. Remove it from git history (`git filter-repo` or BFG), then force-push after coordinating with the team. Rotation is the real fix; history cleanup only reduces further exposure.
+4. Record what happened and add a Gitleaks rule or allowlist change if the scanner missed it.
+
+**Local pre-commit check (optional)**
+```bash
+gitleaks detect --source . --redact --verbose
+```
+
+### 15.3 Dependency checks
+
+- `pip-audit --strict` fails the build on any known vulnerability in `Backend/requirements.txt`.
+- Dependency review blocks pull requests that add dependencies with **high** or **critical** vulnerabilities.
+- Dependabot opens weekly update pull requests for pip, GitHub Actions and Terraform providers.
+- `fastapi` and `starlette` are pinned to compatible ranges so the Starlette `TestClient` keeps working. Raise the pins deliberately in a pull request, never implicitly.
+- Run locally before pushing:
+  ```bash
+  pip install pip-audit
+  pip-audit -r Backend/requirements.txt
+  ```
+
+### 15.4 SAST with CodeQL
+
+- Scans `python` (application) and `actions` (the workflow files themselves, for injection and over-broad permissions).
+- Uses the `security-extended` query suite, which adds more security rules than the default.
+- Results appear under **Security → Code scanning**; pull requests show alerts inline.
+- CodeQL is free for public repositories. Private repositories need GitHub Advanced Security.
+- Treat alerts in `api.py` (authentication, input validation) and `nim.py` (outbound requests) as highest priority.
+
+### 15.5 DAST with OWASP ZAP
+
+How it works:
+1. The workflow installs the backend and starts `uvicorn` on the runner with a **random throwaway `INGEST_API_KEY`** and a fake NVIDIA key, so no real credentials or cloud resources are touched.
+2. **ZAP baseline scan** crawls the web console and checks passive rules (security headers, cookies, information disclosure).
+3. **ZAP API scan** reads `/openapi.json` and probes every endpoint, including unauthenticated access to protected routes.
+4. HTML, JSON and Markdown reports are uploaded as workflow artifacts (`zap-baseline-report`, `zap-api-report`).
+
+Policy:
+- First phase: `fail_action: false` (report-only) while findings are triaged.
+- Second phase: set `fail_action: true`, using a `.zap/rules.tsv` file to document accepted findings, and add `zap-scan` to required checks.
+- Never point the scanner at the production Cloud Run URL. Scan production-like staging only, with the owner's written approval.
+
+Expected results and what they mean:
+- `/ingest`, `/alerts/{id}/explain` and the case mutation routes must answer **401** without a valid `X-API-Key`.
+- Public routes (`/`, `/healthz`) must not leak stack traces or secrets.
+- Missing headers (for example `Content-Security-Policy`, `X-Content-Type-Options`) are reported as warnings to fix in FastAPI middleware.
+
+Run it locally (Docker required):
+```bash
+cd Backend
+export INGEST_API_KEY=$(openssl rand -hex 24) NVIDIA_API_KEY=local-test
+uvicorn coldtrace.api:app --port 8000 &
+docker run --rm --network host -v "$PWD:/zap/wrk" ghcr.io/zaproxy/zaproxy:stable \
+  zap-baseline.py -t http://localhost:8000 -r zap-report.html
+```
+
+### 15.6 Findings triage and ownership
+
+| Severity | Examples | Target fix | Who fixes | Who verifies |
+|---|---|---|---|---|
+| Critical | Leaked secret, exploitable injection, auth bypass | Same day (rotate first) | Moorthy R / Mbambala T | Dr. Peter Opiyo |
+| High | Vulnerable dependency with a known exploit, broken access control | 3 days | Owner of the component | Dr. Peter Opiyo |
+| Medium | Missing security headers, weak validation | Next sprint | Owner of the component | Dr. Peter Opiyo |
+| Low / info | Hardening suggestions | Backlog | Team | Dr. Peter Opiyo |
+
+Dr. Peter Opiyo triages new alerts weekly. Accepted risks are recorded in the pull request or issue with a reason and a review date. Nobody dismisses alerts silently.
+
+### 15.7 Pre-push checklist
+
+```bash
+cd Backend && pytest -q tests && cd ..
+pip-audit -r Backend/requirements.txt
+gitleaks detect --source . --redact
+terraform -chdir=terraform fmt -check -recursive
+```
+
+---
+
+## 16. Ownership Summary (RACI)
 
 **R** = Responsible, **A** = Accountable, **C** = Consulted, **I** = Informed
 
@@ -509,6 +706,11 @@ curl -X POST http://localhost:8000/ingest \
 | Partition-aware querying & trend validation | I | **A/R** | C | I |
 | IAM, WIF & audit-log review | C | | C | **A/R** |
 | Monitoring alerts & evidence integrity review | C | | C | **A/R** |
+| Secret scanning, rotation & leak response | **A/R** | | I | R |
+| Dependency vulnerability management | **A/R** | | R | C |
+| SAST (CodeQL) triage and remediation | R | | R | **A/R** |
+| DAST (OWASP ZAP) scans and triage | C | | R | **A/R** |
+| Branch protection & required checks | **A/R** | | C | C |
 | Production reliability & cost/quota oversight | **A/R** | | R | C |
 
 ---
