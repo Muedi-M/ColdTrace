@@ -4,12 +4,19 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
   REGION: us-central1
   REPOSITORY: coldtrace
   SERVICE_NAME: coldtrace-app
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -28,9 +35,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install backend dependencies and run tests
-        env:
-          INGEST_API_KEY: change-me-local-only
         working-directory: Backend
+        env:
           INGEST_API_KEY: change-me-local-only
           NVIDIA_API_KEY: dummy-key-for-tests
         run: |
