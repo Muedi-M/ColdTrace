@@ -28,6 +28,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install backend dependencies and run tests
+        env:
+          INGEST_API_KEY: change-me-local-only
         working-directory: Backend
         env:
           INGEST_API_KEY: change-me-local-only
