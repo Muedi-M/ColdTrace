@@ -1,7 +1,7 @@
 locals {
-  data_analyst_email     = "ntokozochantell396@gmail.com"
-  ai_foundation_email    = "mbambalat@gmail.com"
-  cybersecurity_email    = "drpeteropiyo@gmail.com"
+  data_analyst_email  = "ntokozochantell396@gmail.com"
+  ai_foundation_email = "mbambalat@gmail.com"
+  cybersecurity_email = "drpeteropiyo@gmail.com"
 
   ai_foundation_project_roles = toset([
     "roles/run.developer",

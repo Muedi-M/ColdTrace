@@ -72,11 +72,11 @@ resource "google_cloud_scheduler_job" "simulated_ingest" {
       "Content-Type" = "application/json"
     }
     body = base64encode(jsonencode({
-      location_id                  = "JHB-DC01"
-      warehouse_temperature_c      = 4.2
-      warehouse_humidity_percent   = 62.0
-      cooling_load_percent         = 54.0
-      sensor_connectivity          = 99.2
+      location_id                = "JHB-DC01"
+      warehouse_temperature_c    = 4.2
+      warehouse_humidity_percent = 62.0
+      cooling_load_percent       = 54.0
+      sensor_connectivity        = 99.2
     }))
   }
 
