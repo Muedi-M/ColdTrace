@@ -1,6 +1,12 @@
 from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
 from coldtrace.api import app
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _api_key(monkeypatch):
+    monkeypatch.setenv("INGEST_API_KEY", "change-me-local-only")
 
 client = TestClient(app)
 
