@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from fastapi.testclient import TestClient
-from coldtrace.api import app
+from coldtrace.api import app, require_key
 import os
 import pytest
 
@@ -32,14 +32,18 @@ def test_security_headers_present():
     assert res.status_code == 200
 
 def test_reject_future_timestamp_and_out_of_range():
-    os.environ["INGEST_API_KEY"] = "change-me-local-only"
-    future_ts = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
-    res = client.post("/ingest", headers={"X-API-Key": "change-me-local-only"}, json={
-        "location_id": "JHB-DC01",
-        "ts": future_ts,
-        "warehouse_temperature_c": 150.0,
-        "warehouse_humidity_percent": 60.0,
-        "cooling_load_percent": 50.0,
-        "sensor_connectivity": 99.0,
-    })
-    assert res.status_code == 422, res.text
+    app.dependency_overrides[require_key] = lambda: None
+    try:
+        os.environ["INGEST_API_KEY"] = "change-me-local-only"
+        future_ts = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+        res = client.post("/ingest", headers={"X-API-Key": "change-me-local-only"}, json={
+            "location_id": "JHB-DC01",
+            "ts": future_ts,
+            "warehouse_temperature_c": 150.0,
+            "warehouse_humidity_percent": 60.0,
+            "cooling_load_percent": 50.0,
+            "sensor_connectivity": 99.0,
+        })
+        assert res.status_code == 422, res.text
+    finally:
+        app.dependency_overrides.pop(require_key, None)
