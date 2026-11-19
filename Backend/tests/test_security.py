@@ -32,6 +32,7 @@ def test_security_headers_present():
     assert res.status_code == 200
 
 def test_reject_future_timestamp_and_out_of_range():
+    os.environ["INGEST_API_KEY"] = "change-me-local-only"
     future_ts = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
     res = client.post("/ingest", headers={"X-API-Key": "change-me-local-only"}, json={
         "location_id": "JHB-DC01",
