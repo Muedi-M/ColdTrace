@@ -31,7 +31,6 @@ jobs:
         env:
           INGEST_API_KEY: change-me-local-only
         working-directory: Backend
-        env:
           INGEST_API_KEY: change-me-local-only
           NVIDIA_API_KEY: dummy-key-for-tests
         run: |
