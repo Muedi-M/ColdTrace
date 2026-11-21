@@ -203,10 +203,10 @@
           <div class="snowflake">❄️</div>
           <div>
             <div style="font-weight:800; font-size:17px; letter-spacing:-0.02em;">ColdTrace</div>
-            <div style="font-size:11.5px; color:var(--muted);">Cold Chain Alerts</div>
+            <div style="font-size:11.5px; color:var(--muted);">Cold Chain Storage</div>
           </div>
         </div>
-        <button class="side-nav-btn active" id="snav-home" onclick="switchTab('home')"><span>⚠️ Command Home</span></button>
+        <button class="side-nav-btn active" id="snav-home" onclick="switchTab('home')"><span>⚠️ Home</span></button>
         <button class="side-nav-btn" id="snav-batches" onclick="switchTab('batches')"><span>📦 Batches &amp; Units</span><span class="pill-counter" id="sideFlagCount">3</span></button>
         <button class="side-nav-btn" id="snav-investigations" onclick="switchTab('investigations')"><span>🔍 Investigations</span></button>
         <button class="side-nav-btn" id="snav-quality" onclick="switchTab('quality')"><span>📊 Quality &amp; Audit</span></button>
@@ -225,14 +225,14 @@
           <div style="display:flex; align-items:center; gap:12px;">
             <div class="snowflake" style="display:flex;">❄️</div>
             <div>
-              <h1 class="brand-title">Cold Chain Alerts</h1>
+              <h1 class="brand-title">Cold Chain Storage</h1>
               <p class="brand-sub" id="headerSub">3 batches affected • 12 units</p>
             </div>
           </div>
           <div class="top-actions">
             <div class="search-box">
               <span class="search-icon">🔍</span>
-              <input id="globalSearch" type="text" placeholder="Search batch, unit, INV..." oninput="handleSearch(this.value)" />
+              <input id="globalSearch" type="text" aria-label="Search batch, unit, or investigation" placeholder="Search batch, unit, INV..." oninput="handleSearch(this.value)" />
             </div>
             <div class="mascot" onclick="toggleConfig()" title="API Key & CSV Replay Controls">🐻‍❄️</div>
           </div>
@@ -240,7 +240,7 @@
 
         <div class="config-drawer" id="configDrawer">
           <span style="font-size:12px; font-weight:600; color:var(--muted);">X-API-Key:</span>
-          <input id="apiKey" type="password" value="change-me-local-only" placeholder="X-API-Key" />
+          <input id="apiKey" type="password" value="" placeholder="Enter X-API-Key" aria-label="X-API-Key" />
           <button class="badge progress" style="border:none; cursor:pointer; padding:7px 12px;" onclick="replay14d()">Replay CSV Feed</button>
           <button class="badge neutral" style="border:none; cursor:pointer; padding:7px 12px;" onclick="refreshAll()">Sync Now</button>
         </div>
@@ -371,7 +371,7 @@
           </div>
           <table>
             <thead>
-              <tr><th>Detector</th><th>Macro-F1</th><th>Event Recall</th><th>Excursion TTD</th><th>False Alerts / Loc-Day</th></tr>
+              <tr><th>Detector</th><th>Macro-F1</th><th>Event Recall</th><th>Excursion TTD</th><th>False  / Loc-Day</th></tr>
             </thead>
             <tbody>
               <tr><td>Fixed Threshold (&gt;8 °C)</td><td class="mono">0.284</td><td class="mono">4.9%</td><td class="mono">—</td><td class="mono">0.024</td></tr>
@@ -433,10 +433,10 @@
   </nav>
 
   <!-- Toast Notification -->
-  <div class="toast" id="toastMsg">✓ Updated</div>
+  <div class="toast" id="toastMsg" role="status" aria-live="polite">✓ Updated</div>
 
   <!-- MODAL 1: SIMULATE A FAILURE SHEET -->
-  <div class="modal-backdrop" id="simModal" onclick="if(event.target===this) closeSimModal()">
+  <div class="modal-backdrop" id="simModal" role="dialog" aria-modal="true" aria-labelledby="simUnitTitle" onclick="if(event.target===this) closeSimModal()">
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -471,7 +471,7 @@
   </div>
 
   <!-- MODAL 2: ASSIGN INVESTIGATION SHEET -->
-  <div class="modal-backdrop" id="assignModal" onclick="if(event.target===this) closeAssignModal()">
+  <div class="modal-backdrop" id="assignModal" role="dialog" aria-modal="true" onclick="if(event.target===this) closeAssignModal()">
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
       <div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="assignStepLabel">STEP 1 OF 3</div>
@@ -479,7 +479,7 @@
       <p style="margin:0 0 12px; font-size:13px; color:var(--muted);">Who checks the unit and the flagged stock?</p>
       <div id="staffList"></div>
       <div style="font-size:12px; color:var(--muted); margin:10px 0 6px;">Handoff note (logged with a timestamp)</div>
-      <input id="handoffNote" placeholder="What should they check first?" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; font-size:13px;" />
+      <input id="handoffNote" aria-label="Handoff note" placeholder="What should they check first?" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; font-size:13px;" />
       <button class="btn-orange" onclick="submitAssignment()">Assign</button>
     </div>
   </div>

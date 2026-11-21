@@ -60,21 +60,27 @@ const STAFF = [
       switchTab(prevTab === 'batches' ? 'batches' : 'home');
     }
 
-    function stepperHTML(stageIndex) {
-      const stages = ['In storage', 'Monitoring', 'Investigation', 'Resolution'];
-      return `<div class="stepper">
-        <div class="step-line"></div>
-        ${stages.map((st, idx) => {
-          const cls = idx < stageIndex ? 'done' : (idx === stageIndex ? 'current' : '');
-          return `<div class="step ${cls}"><div class="step-dot">${idx < stageIndex ? '✓' : ''}</div><div class="step-label">${st}</div></div>`;
-        }).join('')}
-      </div>`;
-    }
+      function stepperHTML(stageIndex, opts = {}) {
+        const stages = ['In storage', 'Monitoring', 'Investigation', 'Resolution'];
+        const isClosed = Boolean(opts.closed);
+        const maxActiveStage = isClosed ? 3 : Math.min(Number(stageIndex) || 0, 2);
+        return `<div class="stepper" aria-label="Batch progress" aria-disabled="true">
+          <div class="step-line"></div>
+          ${stages.map((st, idx) => {
+            const isCompletedStage = (idx < maxActiveStage) || (idx === 3 && isClosed);
+            const isCurrentStage = !isCompletedStage && (idx === maxActiveStage);
+            const cls = isCompletedStage ? 'done' : (isCurrentStage ? 'current' : 'pending');
+            const dot = isCompletedStage ? '✓' : '';
+            return `<div class="step ${cls}" style="${cls === 'pending' ? 'opacity:0.45;' : ''}"><div class="step-dot">${dot}</div><div class="step-label">${st}</div></div>`;
+          }).join('')}
+        </div>`;
+      }
 
     function sparklineHTML(series, height = 82) {
       const pts = (series && series.length > 1) ? series : [1.1, 1.3, 1.2, 1.5, 1.4, 2.8, 5.3];
       const w = 340, h = height, min = 0, max = 11;
       const yThresh = h - ((2.0 - min) / (max - min)) * h;
+        const yHighThresh = h - ((8.0 - min) / (max - min)) * h;
       const coords = pts.map((v, i) => {
         const x = (i / (pts.length - 1)) * (w - 30);
         const y = h - ((Math.max(min, Math.min(max, v)) - min) / (max - min)) * h;
@@ -82,8 +88,8 @@ const STAFF = [
       });
       const poly = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
       const last = coords[coords.length - 1];
-      const stroke = last.v > 2.0 ? '#DC2626' : '#2563EB';
-      const fill = last.v > 2.0 ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)';
+      const stroke = (last.v > 8.0 || last.v < 2.0) ? '#DC2626' : '#2563EB';
+      const fill = (last.v > 8.0 || last.v < 2.0) ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)';
       const areaPts = `0,${h} ${poly} ${(w - 30)},${h}`;
       const dots = coords.map(c => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6" fill="#FFFFFF" stroke="${stroke}" stroke-width="1.6"><title>${c.v.toFixed(1)} °C</title></circle>`).join('');
 
@@ -142,7 +148,7 @@ const STAFF = [
       document.getElementById('tasksRemaining').innerText = `${visTasks.length} remaining ›`;
       document.getElementById('tasksList').innerHTML = visTasks.map(t => {
         const iconCls = t.badgeClass === 'high' ? 'warn' : (t.badgeClass === 'progress' ? 'info' : 'neutral');
-        return `<div class="list-row" onclick="openInvestigationDetail('${t.invId}')">
+        return `<div class="list-row" tabindex="0" role="button" onclick="openInvestigationDetail('${t.invId}')">
           <div class="row-icon ${iconCls}">${t.icon}</div>
           <div class="row-main">
             <div class="row-title">${t.title}</div>
@@ -156,7 +162,7 @@ const STAFF = [
       const visFlagged = flagged.filter(matchesSearch);
       document.getElementById('affectedCount').innerText = `${visFlagged.length} of ${appData.batches.length} ›`;
       document.getElementById('homeBatchesList').innerHTML = visFlagged.map(b => `
-        <div class="card interactive" onclick="openBatchDetail('${b.code}')">
+        <div class="card interactive" tabindex="0" role="button" onclick="openBatchDetail('${b.code}')">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="display:flex; gap:12px;">
               <div class="row-icon warn">⚠️</div>
@@ -173,7 +179,7 @@ const STAFF = [
           <div style="font-size:12px; color:var(--muted); margin-top:10px;">
             🧊 ${b.unitName} &nbsp;•&nbsp; 📦 ${b.units} / ${b.units} units &nbsp;•&nbsp; 🕒 Arrived ${b.arrived}
           </div>
-          ${stepperHTML(b.stageIndex)}
+          ${stepperHTML(b.stageIndex, { closed: b.invStatus === 'Closed' })}
         </div>
       `).join('');
     }
@@ -192,6 +198,73 @@ const STAFF = [
       renderBatches();
     }
 
+    async function apiFetch(url, options = {}, errLabel = 'Request failed') {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        let detail = '';
+        try {
+          const raw = await res.text();
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              detail = parsed.detail || raw;
+            } catch (_) {
+              detail = raw;
+            }
+          }
+        } catch (_) {}
+        const msg = `${errLabel} (HTTP ${res.status})${detail ? ': ' + String(detail).slice(0, 140) : ''}`;
+        showToast(`✕ ${msg}`);
+        throw new Error(msg);
+      }
+      return res;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSimModal();
+        closeAssignModal();
+        const cfg = document.getElementById('configDrawer');
+        if (cfg) cfg.classList.remove('open');
+      }
+    });
+
+    function isPharmaCategory(cat = '') {
+      const c = String(cat).toLowerCase();
+      return c.includes('pharma') || c.includes('biologic') || c.includes('vaccine') || c.includes('insulin');
+    }
+
+    function tempBandLabel(cat = '') {
+      return isPharmaCategory(cat) ? '2°C–8°C' : '≤ 2°C';
+    }
+
+    function isTempOutOfRange(temp, cat = '') {
+      const t = Number(temp);
+      if (Number.isNaN(t)) return false;
+      if (isPharmaCategory(cat)) return t < 2.0 || t > 8.0;
+      return t > 2.0;
+    }
+
+    function pluralize(n, singular, plural) {
+      return `${n} ${n === 1 ? singular : plural}`;
+    }
+
+    function openFlaggedBatches() {
+      batchFilter = 'Flagged';
+      switchTab('batches');
+      document.querySelectorAll('.seg-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim().toLowerCase().startsWith('flagged'));
+      });
+      renderBatches();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.matches('.card.interactive, .list-row[onclick], .unit-card[onclick], .staff-row[onclick]')) {
+        e.preventDefault();
+        e.target.click();
+      }
+    });
+
     function renderBatches() {
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
         <div class="unit-card" onclick="openSimModal('${u.locationId}')">
@@ -209,15 +282,16 @@ const STAFF = [
       if (batchFilter === 'Watch') list = list.filter(b => b.status === 'Monitoring');
       if (batchFilter === 'Cleared') list = list.filter(b => b.status === 'In range');
       if (batchSort === 'hottest') list.sort((a, b) => b.temp - a.temp);
+      if (batchSort === 'newest') list.sort((a, b) => Date.parse(b.arrived || b.ts || 0) - Date.parse(a.arrived || a.ts || 0));
 
       document.getElementById('kpiTotalB').innerText = appData.batches.length;
       document.getElementById('kpiFlaggedB').innerText = appData.batches.filter(b => b.status === 'Out of range').length;
-      document.getElementById('batchListHeading').innerText = `${list.length} batches`;
+      document.getElementById('batchListHeading').innerText = list.length ? pluralize(list.length, 'batch', 'batches') : (searchQuery ? `No batches matching "${searchQuery}"` : '0 batches');
 
       document.getElementById('batchesList').innerHTML = list.map(b => {
         const badgeCls = b.status === 'Out of range' ? 'high' : (b.status === 'Monitoring' ? 'progress' : 'ok');
-        const tempColor = b.temp > 2 ? 'var(--red)' : 'var(--blue)';
-        return `<div class="card interactive" onclick="openBatchDetail('${b.code}')">
+        const tempColor = isTempOutOfRange(b.temp, b.category) ? 'var(--red)' : 'var(--blue)';
+        return `<div class="card interactive" tabindex="0" role="button" onclick="openBatchDetail('${b.code}')">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
             <div style="display:flex; gap:12px;">
               <div class="row-icon ${b.status === 'Out of range' ? 'warn' : 'ok'}">${b.status === 'Out of range' ? '⚠️' : '✓'}</div>
@@ -228,7 +302,7 @@ const STAFF = [
             </div>
             <div style="text-align:right; margin-left:auto;">
               <div class="mono" style="font-weight:800; font-size:16px; color:${tempColor};">${b.temp.toFixed(1)}°C</div>
-              <div style="font-size:11px; color:var(--muted);">Threshold ≤ 2°C</div>
+              <div style="font-size:11px; color:var(--muted);">Target band ${tempBandLabel(b.category)}</div>
             </div>
             <span class="badge ${badgeCls}">${b.status}</span>
           </div>
@@ -242,7 +316,7 @@ const STAFF = [
               <div><span class="badge progress" style="display:inline-block;margin:4px 0;">In storage</span></div>
               <span style="color:var(--muted);">ETA 45h 57m</span>
             </div>
-          </div>` : stepperHTML(b.stageIndex)}
+          </div>` : stepperHTML(b.stageIndex, { closed: b.invStatus === 'Closed' })}
         </div>`;
       }).join('');
     }
@@ -259,14 +333,14 @@ const STAFF = [
       document.getElementById('batchDetailBody').innerHTML = `
         <div class="card">
           <div style="font-size:12.5px; color:var(--muted);">🧊 ${b.unitName} &nbsp;•&nbsp; 📦 ${b.units} / ${b.units} units &nbsp;•&nbsp; 🕒 Arrived ${b.arrived}</div>
-          ${stepperHTML(b.stageIndex)}
+          ${stepperHTML(b.stageIndex, { closed: b.invStatus === 'Closed' })}
         </div>
         <div class="card">
           <div style="font-weight:700; font-size:15px; margin-bottom:12px;">Sensor readings • last 7 days</div>
           <div style="display:grid; grid-template-columns:repeat(3,1fr); margin-bottom:12px;">
             <div><div style="font-size:11.5px;color:var(--muted);">Latest</div><div class="mono" style="font-size:21px;font-weight:800;color:${b.temp > 2 ? 'var(--red)' : 'var(--blue)'};">${b.temp.toFixed(1)}°C</div></div>
             <div><div style="font-size:11.5px;color:var(--muted);">Peak</div><div class="mono" style="font-size:21px;font-weight:800;">${b.peak.toFixed(1)}°C</div></div>
-            <div><div style="font-size:11.5px;color:var(--muted);">Above 2°C</div><div class="mono" style="font-size:21px;font-weight:800;">${b.aboveHours}h</div></div>
+            <div><div style="font-size:11.5px;color:var(--muted);">Out-of-band</div><div class="mono" style="font-size:21px;font-weight:800;">${b.aboveHours}h</div></div>
           </div>
           ${sparklineHTML(b.series, 92)}
           <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">30-minute telemetry cadence from sensor ${b.sensorId}.</div>
@@ -283,7 +357,7 @@ const STAFF = [
           <div class="card interactive" style="display:flex; justify-content:space-between; align-items:center;" onclick="openInvestigationDetail('${b.invId}')">
             <div>
               <div style="font-weight:700; font-size:15.5px;">${b.invId} • ${b.invStatus}</div>
-              <div style="font-size:12.5px; color:var(--muted); margin-top:4px;">${b.handoffs} handoffs logged • Tap to open case</div>
+              <div style="font-size:12.5px; color:var(--muted); margin-top:4px;">${pluralize(b.handoffs || 0, 'handoff', 'handoffs')} logged • Tap to open case</div>
             </div>
             <span style="color:var(--muted); font-size:20px;">›</span>
           </div>
@@ -361,7 +435,7 @@ const STAFF = [
           <button class="btn-ask-ai" onclick="resolveCase('${inv.id}')">✓ Resolve</button>
         </div>
 
-        <div class="card">${stepperHTML(inv.state === 'Closed' ? 3 : 2)}</div>
+        <div class="card">${stepperHTML(inv.state === 'Closed' ? 3 : 2, { closed: inv.state === 'Closed' })}</div>
 
         <div class="home-grid">
           <div class="card">
@@ -399,19 +473,27 @@ const STAFF = [
     }
 
     async function resolveCase(invId) {
-      await fetch('/api/ui/investigations/' + invId + '/resolve', { method: 'POST', headers: headers() });
-      showToast(`✓ ${invId} resolved & closed`);
-      refreshAll();
+      if (!window.confirm(`Resolve and close investigation ${invId}? This action logs final QA closure.`)) return;
+      try {
+        await apiFetch('/api/ui/investigations/' + invId + '/resolve', { method: 'POST', headers: headers() }, `Resolve ${invId} failed`);
+        showToast(`✓ ${invId} resolved & closed`);
+        await refreshAll();
+      } catch (_) {}
     }
 
     async function askNvidiaAI(invId) {
       const box = document.getElementById('aiNarrative');
+      const prev = box.innerText;
       box.innerText = 'Querying NVIDIA NIM model with sealed sensor evidence...';
-      const res = await fetch('/api/ui/investigations/' + invId + '/ask-ai', { method: 'POST', headers: headers() });
-      const data = await res.json();
-      box.innerText = data.narrative || 'AI triage updated.';
-      showToast('✦ NVIDIA NIM analysis updated');
-      refreshAll();
+      try {
+        const res = await apiFetch('/api/ui/investigations/' + invId + '/ask-ai', { method: 'POST', headers: headers() }, 'NVIDIA NIM analysis failed');
+        const data = await res.json();
+        box.innerText = data.narrative || 'AI triage updated.';
+        showToast('✦ NVIDIA NIM analysis updated');
+        await refreshAll();
+      } catch (_) {
+        box.innerText = prev;
+      }
     }
 
     function openSimModal(locationId) {
@@ -420,7 +502,7 @@ const STAFF = [
       selectedSimUnit = u;
       document.getElementById('simLocLabel').innerText = `STORAGE LOCATION • ${u.shortCode}`;
       document.getElementById('simUnitTitle').innerText = u.unitName;
-      document.getElementById('simUnitSub').innerText = `${u.siteName} • threshold ≤ 2°C`;
+      document.getElementById('simUnitSub').innerText = `${u.siteName} • Pharma band 2°C–8°C / Cold ≤ 2°C`;
       document.getElementById('simChartBox').innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
           <span style="font-size:12.5px; color:var(--muted);">Warmest batch ${u.warmestBatch}</span>
@@ -437,18 +519,22 @@ const STAFF = [
 
     async function triggerFault(kind) {
       if (!selectedSimUnit) return;
+      const target = selectedSimUnit;
       closeSimModal();
-      showToast(`⚡ Injecting ${kind} into ${selectedSimUnit.locationId}...`);
-      await fetch('/api/demo/inject', {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({ location_id: selectedSimUnit.locationId, kind })
-      });
-      await refreshAll();
-      showToast(`✓ Alert triggered on ${selectedSimUnit.unitName}`);
+      showToast(`⚡ Injecting ${kind} into ${target.locationId}...`);
+      try {
+        await apiFetch('/api/demo/inject', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ location_id: target.locationId, kind })
+        }, 'Fault injection failed');
+        await refreshAll();
+        showToast(`✓ Alert triggered on ${target.unitName}`);
+      } catch (_) {}
     }
 
     function openAssignModal(invId) {
+      if (selectedInvId !== invId) selectedStaff = '';
       selectedInvId = invId;
       document.getElementById('assignStepLabel').innerText = `${invId} • STEP 1 OF 3`;
       document.getElementById('staffList').innerHTML = STAFF.map(s => `
@@ -468,24 +554,32 @@ const STAFF = [
     }
 
     async function submitAssignment() {
+      if (!selectedStaff) {
+        showToast('✕ Select a team member before assigning');
+        return;
+      }
       const note = document.getElementById('handoffNote').value.trim() || 'Inspect unit and verify physical temperature.';
-      await fetch('/api/ui/investigations/' + selectedInvId + '/assign', {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({ assignee: selectedStaff, note })
-      });
-      document.getElementById('handoffNote').value = '';
-      closeAssignModal();
-      showToast(`👤 Assigned to ${selectedStaff}`);
-      refreshAll();
+      try {
+        await apiFetch('/api/ui/investigations/' + selectedInvId + '/assign', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ assignee: selectedStaff, note })
+        }, 'Assignment failed');
+        document.getElementById('handoffNote').value = '';
+        closeAssignModal();
+        showToast(`👤 Assigned to ${selectedStaff}`);
+        await refreshAll();
+      } catch (_) {}
     }
 
     async function replay14d() {
       showToast('⏳ Replaying cold_chain_labeled_2022_2026.csv...');
-      const res = await fetch('/api/demo/replay', { method: 'POST', headers: headers() });
-      const data = await res.json();
-      await refreshAll();
-      showToast(`✓ Replayed ${data.rows_processed || 900} rows (${data.alerts_total || 0} alerts)`);
+      try {
+        const res = await apiFetch('/api/demo/replay', { method: 'POST', headers: headers() }, 'CSV replay failed');
+        const data = await res.json();
+        await refreshAll();
+        showToast(`✓ Replayed ${data.rows_processed ?? 0} rows (${data.alerts_total ?? 0} alerts)`);
+      } catch (_) {}
     }
 
     refreshAll();

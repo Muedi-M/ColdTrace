@@ -7,7 +7,7 @@ Env: MODEL_PATH, INGEST_API_KEY (required), NVIDIA_API_KEY | NIM_SECRET_NAME, NI
 
 import hmac
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -206,21 +206,21 @@ _ui_store = {
     "datasetFile": _resolve_dataset_path().name if _resolve_dataset_path() else "mock",
     "units": [
         {"locationId": "JHB-DC01", "shortCode": "U12", "unitName": "Unit 12 (JHB-DC01)", "siteName": "Johannesburg DC • Waterfall", "temp": 8.4, "flaggedCount": 1, "invCode": "INV-2048", "warmestBatch": "7F-442", "series": _tail_series("JHB-DC01")},
-        {"locationId": "DBN-DC02", "shortCode": "U14", "unitName": "Unit 14 (DBN-DC02)", "siteName": "Durban DC • Sandton Hub", "temp": 6.1, "flaggedCount": 1, "invCode": "INV-2047", "warmestBatch": "8A-118", "series": _tail_series("DBN-DC02")},
-        {"locationId": "CPT-DC03", "shortCode": "U22", "unitName": "Unit 22 (CPT-DC03)", "siteName": "Cape Town DC • Midrand", "temp": 5.3, "flaggedCount": 1, "invCode": "INV-2046", "warmestBatch": "9C-301", "series": _tail_series("CPT-DC03")},
+        {"locationId": "DBN-DC02", "shortCode": "U14", "unitName": "Unit 14 (DBN-DC02)", "siteName": "Durban DC • Durban North", "temp": 6.1, "flaggedCount": 1, "invCode": "INV-2047", "warmestBatch": "8A-118", "series": _tail_series("DBN-DC02")},
+        {"locationId": "CPT-DC03", "shortCode": "U22", "unitName": "Unit 22 (CPT-DC03)", "siteName": "Cape Town DC • Cape Town Harbour", "temp": 5.3, "flaggedCount": 1, "invCode": "INV-2046", "warmestBatch": "9C-301", "series": _tail_series("CPT-DC03")},
     ],
     "batches": [
         {"code": "7F-442", "category": "Pharmaceuticals", "product": "Insulin pens", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 4, "arrived": "2026-10-28 00:30", "temp": 8.4, "peak": 8.4, "aboveHours": 18, "sensorId": "JHB-S2", "shipmentId": "SH-7713", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 4, "status": "Out of range", "stageIndex": 2, "series": _tail_series("JHB-DC01")},
         {"code": "8A-118", "category": "Biologics", "product": "Flu vaccine vials", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 5, "arrived": "2026-10-27 12:30", "temp": 6.1, "peak": 6.1, "aboveHours": 14, "sensorId": "DBN-S1", "shipmentId": "SH-7712", "destination": "Durban North depot", "invId": "INV-2047", "invStatus": "In progress", "handoffs": 3, "status": "Out of range", "stageIndex": 2, "series": _tail_series("DBN-DC02")},
         {"code": "9C-301", "category": "Pharmaceuticals", "product": "Eye drops", "locationSite": "Cape Town DC (CPT-DC03)", "unitName": "Unit 22", "locationId": "CPT-DC03", "units": 3, "arrived": "2026-10-26 17:30", "temp": 5.3, "peak": 5.3, "aboveHours": 12, "sensorId": "CPT-S2", "shipmentId": "SH-7769", "destination": "Cape Town Harbour pick-up", "invId": "INV-2046", "invStatus": "Under review", "handoffs": 5, "status": "Out of range", "stageIndex": 3, "series": _tail_series("CPT-DC03")},
-        {"code": "7F-451", "category": "Seafood", "product": "Hake fillets", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 9, "arrived": "2026-10-26 20:30", "temp": 1.5, "peak": 1.8, "aboveHours": 0, "sensorId": "JHB-S1", "shipmentId": "SH-7712", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 1, "status": "Monitoring", "stageIndex": 1, "series": [1.1, 1.2, 1.4, 1.3, 1.5, 1.4, 1.5]},
+        {"code": "7F-451", "category": "Seafood", "product": "Hake fillets", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 9, "arrived": "2026-10-26 20:30", "temp": 1.5, "peak": 1.8, "aboveHours": 0, "sensorId": "JHB-S1", "shipmentId": "SH-7755", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 1, "status": "In range", "stageIndex": 1, "series": [1.1, 1.2, 1.4, 1.3, 1.5, 1.4, 1.5]},
         {"code": "7F-558", "category": "Bakery", "product": "Baked cheesecake", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 4, "arrived": "2026-10-25 16:30", "temp": 1.0, "peak": 1.4, "aboveHours": 0, "sensorId": "DBN-S3", "shipmentId": "SH-7724", "destination": "Midrand Hub", "invId": "INV-2045", "invStatus": "Closed", "handoffs": 2, "status": "In range", "stageIndex": 0, "series": [1.1, 1.0, 1.2, 1.1, 0.9, 1.1, 1.0]},
     ],
     "investigations": [
         {
             "id": "INV-2048", "batchCode": "7F-442", "unitName": "Unit 12 (JHB-DC01)", "reason": "COOLING_FAILURE",
             "temp": 8.4, "units": 4, "statusText": "Unassigned", "state": "Open", "priority": "High", "age": "38m ago",
-            "assignee": "Unassigned", "shipmentId": "SH-7713", "handoffs": 4, "sha256": "9f2c41d7e0a85b36881c49a2",
+            "assignee": "Unassigned", "shipmentId": "SH-7713", "handoffs": 4, "sha256": "d773916a96ad23f94b6f3c8760e827aaba6b5cd8b509aa83b9c627bfe6b4cb8e",
             "aiSummary": "SUMMARY\n• High-priority open investigation INV-2048 at JHB-DC01 (Unit 12).\n• Labeled dataset telemetry shows temperature drift above safe threshold with reduced cooling load.\n\nAFFECTED INVENTORY\n• 7F-442: 4 insulin pens at risk; shipment SH-7713 placed on hold.",
             "timeline": [
                 {"icon": "🌡", "tone": "warn", "title": "Temperature rising in JHB-DC01", "detail": "Telemetry sourced from cold_chain_labeled_2022_2026.csv", "source": "Sensor JHB-S2", "time": "2026-10-28 17:30"},
@@ -230,7 +230,7 @@ _ui_store = {
         {
             "id": "INV-2047", "batchCode": "8A-118", "unitName": "Unit 14 (DBN-DC02)", "reason": "TEMP_EXCURSION",
             "temp": 6.1, "units": 5, "statusText": "Sipho Peters", "state": "In progress", "priority": "Medium", "age": "3h ago",
-            "assignee": "Sipho Peters", "shipmentId": "SH-7712", "handoffs": 3, "sha256": "4a036b92d7c1189e041f32b1",
+            "assignee": "Sipho Peters", "shipmentId": "SH-7712", "handoffs": 3, "sha256": "3ba1a60b88391393658826a166feb4a42a5278f0b5d354aa46382e7730f3eb20",
             "aiSummary": "SUMMARY\n• DBN-DC02 drifted out of band; Sipho Peters assigned to verify door seal and relocate 5 flu vaccine vials.",
             "timeline": [
                 {"icon": "⚠️", "tone": "warn", "title": "Batch 8A-118 flagged", "detail": "Excursion detected in DBN-DC02", "source": "RandomForest Detector", "time": "2026-10-28 17:00"}
@@ -239,7 +239,7 @@ _ui_store = {
         {
             "id": "INV-2046", "batchCode": "9C-301", "unitName": "Unit 22 (CPT-DC03)", "reason": "SENSOR_DROPOUT",
             "temp": 5.3, "units": 3, "statusText": "Aisha Dlamini", "state": "Under review", "priority": "High", "age": "1d ago",
-            "assignee": "Aisha Dlamini", "shipmentId": "SH-7769", "handoffs": 5, "sha256": "7827400a5a912e4b019c77d0",
+            "assignee": "Aisha Dlamini", "shipmentId": "SH-7769", "handoffs": 5, "sha256": "3c5517c4fd1ed8d49762458925f240427d8ff36860ad0f5e1924fc8b99f084a0",
             "aiSummary": "SUMMARY\n• Connectivity collapse and frozen readings detected at CPT-DC03; manual probe verification required for batch 9C-301.",
             "timeline": [
                 {"icon": "⚠️", "tone": "warn", "title": "Batch 9C-301 flagged", "detail": "Sensor dropout detected in CPT-DC03", "source": "ColdChain rules", "time": "2026-10-27 20:00"}
@@ -306,6 +306,56 @@ def replay_labeled_csv():
                 _state["alerts"][det.alert.alert_id] = det.alert
     _sync_csv_and_alerts_to_ui()
     return {"status": "replayed", "source": path.name, "rows_processed": count, "alerts_total": len(_state["alerts"])}
+
+@app.post("/api/demo/inject", dependencies=[Depends(require_key)])
+async def inject_demo_fault(req: Request):
+    body = await req.json()
+    loc = body.get("location_id", "JHB-DC01")
+    kind = str(body.get("kind", "COOLING_FAILURE")).upper()
+    if loc not in LOCATIONS:
+        raise HTTPException(422, f"unknown location {loc!r}")
+
+    last = _latest_readings.get(loc, {"T": 4.0, "H": 75.0, "C": 60.0, "S": 98.0})
+    if kind == "SENSOR_DROPOUT":
+        ev = {"location_id": loc, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+              "T": float(last.get("T", 4.0)), "H": float(last.get("H", 75.0)),
+              "C": float(last.get("C", 60.0)), "S": 10.0}
+    elif kind == "COOLING_FAILURE":
+        ev = {"location_id": loc, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+              "T": max(float(last.get("T", 4.0)) + 4.5, 9.5), "H": float(last.get("H", 75.0)),
+              "C": 20.0, "S": 95.0}
+    else:
+        ev = {"location_id": loc, "ts": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
+              "T": max(float(last.get("T", 4.0)) + 5.0, 10.2), "H": float(last.get("H", 75.0)),
+              "C": 55.0, "S": 95.0}
+
+    _latest_readings[loc] = {"T": ev["T"], "H": ev["H"], "C": ev["C"], "S": ev["S"]}
+    _reading_counts[loc] = _reading_counts.get(loc, 0) + 1
+    det = detector().ingest(ev)
+    if det.alert:
+        _state["alerts"][det.alert.alert_id] = det.alert
+
+    _sync_csv_and_alerts_to_ui()
+    inv = next((x for x in _ui_store["investigations"] if loc in x["unitName"]), None)
+    if inv:
+        inv["temp"] = round(float(ev["T"]), 1)
+        inv["reason"] = kind
+        inv["timeline"].insert(0, {
+            "icon": "⚡", "tone": "warn",
+            "title": f"Simulated {kind} injected",
+            "detail": f"Telemetry T={ev['T']}°C, C={ev['C']}%, S={ev['S']}% at {loc}",
+            "source": "Demo Fault Injector",
+            "time": "Just now"
+        })
+
+    return {
+        "status": "injected",
+        "location_id": loc,
+        "kind": kind,
+        "detector_status": det.status,
+        "alerts_total": len(_state["alerts"]),
+    }
+
 
 @app.post("/api/ui/investigations/{inv_id}/assign", dependencies=[Depends(require_key)])
 async def assign_video_investigation(inv_id: str, req: Request):

@@ -109,7 +109,7 @@ class Detector:
         rows = pd.DataFrame(list(self.buf[loc]))
         rows = rows.rename(columns={"location_id": "Storage_Location_ID", "ts": "Timestamp", "T": "Warehouse_Temperature_C",
                                     "H": "Warehouse_Humidity_Percent", "C": "Cooling_Load_Percent", "S": "Sensor_Connectivity"})
-        rows["Timestamp"] = pd.to_datetime(rows["Timestamp"])
+        rows["Timestamp"] = pd.to_datetime(rows["Timestamp"], format="ISO8601")
         rows = rows[["Timestamp", "Storage_Location_ID", "Warehouse_Temperature_C", "Warehouse_Humidity_Percent",
                      "Cooling_Load_Percent", "Sensor_Connectivity"]]
         return build_features(rows)
