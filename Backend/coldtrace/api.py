@@ -6,6 +6,8 @@ Env: MODEL_PATH, INGEST_API_KEY (required), NVIDIA_API_KEY | NIM_SECRET_NAME, NI
 """
 
 import hmac
+import hashlib
+import json
 import os
 from datetime import datetime, timezone
 
@@ -31,10 +33,30 @@ def detector() -> Detector:
     return _state["det"]
 
 
+def _valid_hashed_key(raw_key: str) -> bool:
+    raw_json = os.getenv("API_KEY_HASHES_JSON", "").strip()
+    if not raw_json or not raw_key:
+        return False
+    try:
+        entries = json.loads(raw_json)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(entries, dict):
+        return False
+    candidate_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest().lower()
+    return any(
+        hmac.compare_digest(candidate_hash, str(stored_hash).strip().lower())
+        for stored_hash in entries.keys()
+    )
+
+
 def require_key(x_api_key: str = Header(default="")):
+    if _valid_hashed_key(x_api_key):
+        return
     expected = os.getenv("INGEST_API_KEY", "")
-    if not expected or not hmac.compare_digest(x_api_key.encode(), expected.encode()):
-        raise HTTPException(401, "invalid or missing X-API-Key")
+    if expected and hmac.compare_digest(x_api_key.encode(), expected.encode()):
+        return
+    raise HTTPException(401, "invalid or missing X-API-Key")
 
 
 class SensorEvent(BaseModel):
