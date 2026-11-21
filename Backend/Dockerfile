@@ -18,6 +18,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY coldtrace ./coldtrace
 COPY frontend ./frontend
 COPY artifacts ./artifacts
+COPY data ./data
 
 RUN chown -R appuser:appgroup /app
 USER 10001

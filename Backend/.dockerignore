@@ -3,7 +3,6 @@
 __pycache__
 *.pyc
 tests/
-data/sample_14d.csv
 scripts/replay.py
 scripts/generate_data.py
 scripts/compare_nim.py
