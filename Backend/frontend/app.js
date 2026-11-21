@@ -18,9 +18,34 @@ const STAFF = [
     let selectedStaff = 'Naledi Mokoena';
     let invSubTab = 'Timeline';
 
+
+    const API_KEY_STORAGE_KEY = 'coldtrace_api_key';
+
+    function resolveApiKey() {
+      const inputEl = document.getElementById('apiKey');
+      const fromInput = inputEl && inputEl.value ? inputEl.value.trim() : '';
+      if (fromInput) {
+        try { localStorage.setItem(API_KEY_STORAGE_KEY, fromInput); } catch (_) {}
+        return fromInput;
+      }
+      try {
+        const fromStorage = (localStorage.getItem(API_KEY_STORAGE_KEY) || '').trim();
+        if (fromStorage) return fromStorage;
+      } catch (_) {}
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const fromQuery = (params.get('api_key') || '').trim();
+        if (fromQuery) {
+          localStorage.setItem(API_KEY_STORAGE_KEY, fromQuery);
+          return fromQuery;
+        }
+      } catch (_) {}
+      return '';
+    }
+
     const headers = () => ({
       'Content-Type': 'application/json',
-      'X-API-Key': document.getElementById('apiKey').value
+      'X-API-Key': resolveApiKey()
     });
 
     function showToast(msg) {
@@ -604,3 +629,19 @@ document.addEventListener('DOMContentLoaded', () => {
     else switchTab('investigations');
   }));
 });
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('apiKey');
+      let saved = '';
+      try { saved = (localStorage.getItem(API_KEY_STORAGE_KEY) || '').trim(); } catch (_) {}
+      if (el) {
+        if (saved && !el.value) el.value = saved;
+        el.addEventListener('input', () => {
+          try { localStorage.setItem(API_KEY_STORAGE_KEY, el.value.trim()); } catch (_) {}
+        });
+        el.addEventListener('change', () => {
+          try { localStorage.setItem(API_KEY_STORAGE_KEY, el.value.trim()); } catch (_) {}
+        });
+      }
+    });
