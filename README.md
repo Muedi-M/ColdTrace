@@ -281,7 +281,7 @@ coldtrace/
 
 ### 6.1 Human access matrix
 
-| Role | Moorthy R | Chantell N. | Mbambala T | Dr. Peter O. |
+| Role | Moorthy R | Chantell N. | Mbambala T | Peter O. |
 |---|:---:|:---:|:---:|:---:|
 | Project Owner | ✅ | | | |
 | Billing Account Administrator | ✅ | | | |
