@@ -202,7 +202,7 @@ coldtrace/
 | **Moorthy R** | DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
 | **Chantell Ntokozo** | Data Analyst | BigQuery data loading, partition-aware querying, telemetry validation |
 | **Mbambala T** | AI & Cloud Foundation Engineer | AI/ML pipeline, container builds, Cloud Run, Pub/Sub, Scheduler, Firestore |
-| **Dr. Peter Opiyo** | Cyber Security Reviewer | Read-only audit of IAM, WIF, logs, monitoring and evidence integrity |
+| **Peter Opiyo** | Cyber Security Reviewer | Read-only audit of IAM, WIF, logs, monitoring and evidence integrity |
 
 ### 5.1 DevOps & Cloud Owner — Moorthy R
 
@@ -256,7 +256,7 @@ coldtrace/
 - Works **without access to plaintext secrets** (`secretmanager.viewer` allows metadata only).
 - Delivers the AI research foundations, synthetic dataset simulator, Random Forest baseline and evaluation, NVIDIA NIM integration and frontend build brief.
 
-### 5.4 Cyber Security Reviewer — Dr. Peter Opiyo
+### 5.4 Cyber Security Reviewer — Peter Opiyo
 
 **Contact:** `drpeteropiyo@gmail.com`
 
@@ -329,7 +329,7 @@ git push ──► GitHub Actions (ci-deploy.yml) ──► OIDC token ──►
 - WIF trust rules are scoped to this repository so other repos cannot impersonate the CI/CD identity.
 - **Terraform** is the single source of truth for APIs, service accounts, IAM bindings, WIF, budget alerts and Cloud Run guardrails.
 - Secrets are rotated in **Secret Manager**; Cloud Run reads the latest version at runtime.
-- Dr. Peter Opiyo periodically reviews the Terraform-declared IAM and WIF rules against the live project state.
+- Peter Opiyo periodically reviews the Terraform-declared IAM and WIF rules against the live project state.
 
 ### 7.1 Pipeline stages
 
@@ -371,7 +371,7 @@ Enable:
 - Require branches to be up to date before merging.
 - Block force pushes and deletions.
 
-Owner: Moorthy R. Reviewer: Dr. Peter Opiyo.
+Owner: Moorthy R. Reviewer: Peter Opiyo.
 
 ### 7.5 Lock down the Workload Identity trust rule
 
@@ -389,7 +389,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
 }
 ```
 
-Dr. Peter Opiyo reviews this condition as part of the WIF audit.
+Peter Opiyo reviews this condition as part of the WIF audit.
 
 ---
 
@@ -639,7 +639,7 @@ terraform -chdir=terraform fmt -check -recursive
 
 **R** = Responsible, **A** = Accountable, **C** = Consulted, **I** = Informed
 
-| Area | Moorthy R | Chantell N. | Mbambala T | Dr. Peter O. |
+| Area | Moorthy R | Chantell N. | Mbambala T | Peter O. |
 |---|:---:|:---:|:---:|:---:|
 | GCP project, billing & `$1/month` budget | **A/R** | I | I | I |
 | Terraform IaC | **A/R** | | C | C |
