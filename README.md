@@ -402,7 +402,7 @@ Peter Opiyo reviews this condition as part of the WIF audit.
 | Cloud Run cap | `--max-instances 1`, `--memory 512Mi` | Mbambala T |
 | BigQuery loading | Free batch `bq load` only; **no streaming inserts** | Chantell Ntokozo |
 | BigQuery querying | Partition filter on `Timestamp`; byte and daily query limits | Chantell Ntokozo |
-| Secrets | Secret Manager only; no plaintext access for engineers | Moorthy R / Dr. Peter Opiyo |
+| Secrets | Secret Manager only; no plaintext access for engineers | Moorthy R / Peter Opiyo |
 | Cost & quota review | Ongoing monitoring of usage and quotas | Moorthy R |
 
 ---
@@ -616,7 +616,7 @@ gcloud secrets versions disable <OLD_VERSION_ID> --secret INGEST_API_KEY
 
 **If a secret is leaked**
 1. Revoke or rotate it immediately (above); for the NVIDIA key, regenerate it in NGC.
-2. Check Cloud Audit Logs and Cloud Run request logs for misuse (Dr. Peter Opiyo).
+2. Check Cloud Audit Logs and Cloud Run request logs for misuse (Peter Opiyo).
 3. Remove it from git history (`git filter-repo` or BFG), then force-push after coordinating with the team. Rotation is the real fix; history cleanup only reduces further exposure.
 4. Record what happened and how it was caught.
 
