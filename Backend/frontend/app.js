@@ -1,3 +1,12 @@
+function escapeHtml(val) {
+  return String(val ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const STAFF = [
       { initials: 'NM', name: 'Naledi Mokoena', role: 'QA lead' },
       { initials: 'SP', name: 'Sipho Peters', role: 'Site technician' },
