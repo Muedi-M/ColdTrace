@@ -357,6 +357,56 @@ function cycleBatchFilter() {
   }
 }
 
+let activeCategoryFilter = 'ALL';
+
+function setCategoryFilter(cat) {
+  activeCategoryFilter = cat || 'ALL';
+  renderBatches();
+}
+
+function resetAllBatchFilters() {
+  activeCategoryFilter = 'ALL';
+  setBatchFilter('ALL', null);
+}
+
+function renderCategoryFilterBar(totalCount, filteredCount) {
+  const hostId = 'categoryFilterBar';
+  let bar = document.getElementById(hostId);
+  if (!bar) {
+    const listEl = document.getElementById('batchesList');
+    if (!listEl || !listEl.parentElement) return;
+    bar = document.createElement('div');
+    bar.id = hostId;
+    bar.className = 'cat-filter-bar';
+    listEl.parentElement.insertBefore(bar, listEl);
+  }
+
+  const categories = ['ALL', ...Array.from(new Set(
+    (Array.isArray(appData.batches) ? appData.batches : [])
+      .map(b => b.category)
+      .filter(Boolean)
+  ))];
+
+  const chipsHtml = categories.map(cat => {
+    const isActive = activeCategoryFilter.toLowerCase() === cat.toLowerCase();
+    const label = cat === 'ALL' ? 'All Categories' : cat;
+    return `<button type="button" class="cat-chip ${isActive ? 'active' : ''}" aria-pressed="${isActive ? 'true' : 'false'}" onclick="setCategoryFilter('${escapeHtml(cat)}')">${escapeHtml(label)}</button>`;
+  }).join('');
+
+  const hasNarrowFilter = activeCategoryFilter !== 'ALL' || (typeof batchFilter === 'string' && batchFilter.toUpperCase() !== 'ALL');
+  const resetHtml = hasNarrowFilter
+    ? `<button type="button" class="btn-reset-filter" onclick="resetAllBatchFilters()">Reset</button>`
+    : '';
+
+  bar.innerHTML = `
+    <div class="cat-chip-group" role="group" aria-label="Filter by category">${chipsHtml}</div>
+    <div class="filter-summary-bar">
+      <span id="batchFilterCount">Showing <strong>${filteredCount}</strong> of <strong>${totalCount}</strong> batches</span>
+      ${resetHtml}
+    </div>
+  `;
+}
+
 function renderBatches() {
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
         <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">
@@ -389,7 +439,11 @@ function renderBatches() {
               <div class="row-icon ${b.status === 'Out of range' ? 'warn' : 'ok'}">${b.status === 'Out of range' ? '⚠️' : '✓'}</div>
               <div>
                 <div style="font-weight:700; font-size:15.5px;">${b.code}</div>
-                <div style="font-size:12.5px; color:var(--muted);">${b.category} • ${b.product}</div>
+                <div class="batch-sub-pills">
+                    <span class="cat-badge">${escapeHtml(b.category)}</span>
+                    <span class="band-badge">Band ${escapeHtml(tempBandLabel(b.category))}</span>
+                    <span style="font-size:12.5px; color:var(--muted);">${escapeHtml(b.product)}</span>
+                  </div>
               </div>
             </div>
             <div style="text-align:right; margin-left:auto;">
