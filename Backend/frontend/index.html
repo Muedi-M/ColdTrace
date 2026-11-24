@@ -207,7 +207,7 @@
           </div>
         </div>
         <button class="side-nav-btn active" id="snav-home" onclick="switchTab('home')"><span>⚠️ Home</span></button>
-        <button class="side-nav-btn" id="snav-batches" onclick="switchTab('batches')"><span>📦 Batches &amp; Units</span><span class="pill-counter" id="sideFlagCount">3</span></button>
+        <button class="side-nav-btn" id="snav-batches" onclick="openFlaggedBatches()"><span>📦 Batches &amp; Units</span><span class="pill-counter" id="sideFlagCount">3</span></button>
         <button class="side-nav-btn" id="snav-investigations" onclick="switchTab('investigations')"><span>🔍 Investigations</span></button>
         <button class="side-nav-btn" id="snav-quality" onclick="switchTab('quality')"><span>📊 Quality &amp; Audit</span></button>
       </div>
@@ -234,7 +234,7 @@
               <span class="search-icon">🔍</span>
               <input id="globalSearch" type="text" aria-label="Search batch, unit, or investigation" placeholder="Search batch, unit, INV..." oninput="handleSearch(this.value)" />
             </div>
-            <div class="mascot" onclick="toggleConfig()" title="API Key & CSV Replay Controls">🐻‍❄️</div>
+            <div class="mascot" title="API Key & CSV Replay Controls">🐻‍❄️</div>
           </div>
         </div>
 
@@ -256,11 +256,11 @@
             </div>
             <div class="temp-pill-box">
               <div class="temp-pill-val mono" id="bannerPeak">🌡 8.4°C</div>
-              <div class="temp-pill-sub">Threshold ≤ 2°C</div>
+              <div class="temp-pill-sub">Pharma 2°C–8°C • Cold ≤ 2°C</div>
             </div>
           </div>
           <p class="banner-desc" id="bannerDesc">Storage units JHB-DC01, DBN-DC02 and CPT-DC03 are out of range. Investigations have been initiated.</p>
-          <button class="btn-orange" onclick="switchTab('batches')">⚡ View affected batches &nbsp;›</button>
+          <button class="btn-orange" onclick="openFlaggedBatches()">⚡ View affected batches &nbsp;›</button>
         </div>
 
         <div class="home-grid">
@@ -300,7 +300,7 @@
           </div>
           <div class="kpi-4">
             <div class="kpi-mini"><div class="lbl">📦 Batches</div><div class="num mono" id="kpiTotalB">27</div><div class="lbl">3 units</div></div>
-            <div class="kpi-mini"><div class="lbl" style="color:var(--red);">▲ Out of range</div><div class="num mono" id="kpiFlaggedB">3</div><div class="lbl">Above 2°C</div></div>
+            <div class="kpi-mini"><div class="lbl" style="color:var(--red);">▲ Out of range</div><div class="num mono" id="kpiFlaggedB">3</div><div class="lbl">Outside 2°C–8°C</div></div>
             <div class="kpi-mini"><div class="lbl" style="color:var(--blue);">👁 Monitoring</div><div class="num mono">4</div><div class="lbl">Near limit</div></div>
             <div class="kpi-mini"><div class="lbl">🚚 Held</div><div class="num mono">3</div><div class="lbl">Shipments</div></div>
           </div>
@@ -427,7 +427,7 @@
   <!-- Mobile Bottom Tab Bar -->
   <nav class="bottom-nav">
     <button class="tab-btn active" id="tab-home" onclick="switchTab('home')"><span class="tab-icon">⚠️</span><span>Home</span></button>
-    <button class="tab-btn" id="tab-batches" onclick="switchTab('batches')"><span class="tab-icon">📦</span><span>Batches</span></button>
+    <button class="tab-btn" id="tab-batches" onclick="openFlaggedBatches()"><span class="tab-icon">📦</span><span>Batches</span></button>
     <button class="tab-btn" id="tab-investigations" onclick="switchTab('investigations')"><span class="tab-icon">🔍</span><span>Investigations</span></button>
     <button class="tab-btn" id="tab-quality" onclick="switchTab('quality')"><span class="tab-icon">📊</span><span>Quality</span></button>
   </nav>
@@ -443,7 +443,7 @@
         <div>
           <div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="simLocLabel">STORAGE LOCATION</div>
           <h2 style="margin:4px 0 2px; font-size:22px; font-weight:800;" id="simUnitTitle">Unit 14</h2>
-          <p style="margin:0 0 12px; font-size:13px; color:var(--muted);" id="simUnitSub">Threshold ≤ 2°C</p>
+          <p style="margin:0 0 12px; font-size:13px; color:var(--muted);" id="simUnitSub">Pharma 2°C–8°C • Cold ≤ 2°C</p>
         </div>
         <button class="badge neutral" style="border:none; cursor:pointer;" onclick="closeSimModal()">✕</button>
       </div>
@@ -474,9 +474,7 @@
   <div class="modal-backdrop" id="assignModal" role="dialog" aria-modal="true" onclick="if(event.target===this) closeAssignModal()">
     <div class="bottom-sheet">
       <div class="sheet-handle"></div>
-      <div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="assignStepLabel">STEP 1 OF 3</div>
-      <h2 style="margin:4px 0 2px; font-size:20px; font-weight:800;">Assign investigation</h2>
-      <p style="margin:0 0 12px; font-size:13px; color:var(--muted);">Who checks the unit and the flagged stock?</p>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><div style="font-size:11px; font-weight:700; color:var(--orange); letter-spacing:0.04em;" id="assignStepLabel">Step 1</div><h2 style="margin:4px 0 2px; font-size:20px; font-weight:800;">Assign investigation</h2></div><button class="badge neutral" style="border:none; cursor:pointer;" onclick="closeAssignModal()" aria-label="Close assign dialog">✕</button></div>
       <div id="staffList"></div>
       <div style="font-size:12px; color:var(--muted); margin:10px 0 6px;">Handoff note (logged with a timestamp)</div>
       <input id="handoffNote" aria-label="Handoff note" placeholder="What should they check first?" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:12px; font-size:13px;" />

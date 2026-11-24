@@ -153,7 +153,7 @@ const STAFF = [
 
     function matchesSearch(obj) {
       if (!searchQuery) return true;
-      return JSON.stringify(obj).toLowerCase().includes(searchQuery);
+      return [obj.code, obj.id, obj.product, obj.category, obj.unit, obj.unitName, obj.site, obj.location, obj.batchCode, obj.shipmentId].filter(Boolean).some(v => String(v).toLowerCase().includes(searchQuery));
     }
 
     function renderHome() {
@@ -561,7 +561,7 @@ const STAFF = [
     function openAssignModal(invId) {
       if (selectedInvId !== invId) selectedStaff = '';
       selectedInvId = invId;
-      document.getElementById('assignStepLabel').innerText = `${invId} • STEP 1 OF 3`;
+      document.getElementById('assignStepLabel').innerText = `${invId} • Step 1`;
       document.getElementById('staffList').innerHTML = STAFF.map(s => `
         <div class="staff-row ${selectedStaff === s.name ? 'selected' : ''}" onclick="selectedStaff='${s.name}'; openAssignModal('${invId}')">
           <div class="avatar">${s.initials}</div>
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('snav-investigations', 'click', () => switchTab('investigations'));
   bind('snav-quality', 'click', () => switchTab('quality'));
   bind('tab-home', 'click', () => switchTab('home'));
-  bind('tab-batches', 'click', () => switchTab('batches'));
+  bind('tab-batches', 'click', () => openFlaggedBatches());
   bind('tab-investigations', 'click', () => switchTab('investigations'));
   bind('tab-quality', 'click', () => switchTab('quality'));
   bind('globalSearch', 'input', (e) => handleSearch(e.target.value));
