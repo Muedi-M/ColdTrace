@@ -776,3 +776,113 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     });
+
+
+function applyAuditV3FinalPolish() {
+  const modal = document.getElementById('assignModal') || document.querySelector('[data-assign-modal], .assign-modal');
+  const rows = document.querySelectorAll('.staff-row, [data-staff-row]');
+  rows.forEach((row, idx) => {
+    row.setAttribute('role', 'radio');
+    row.setAttribute('tabindex', idx === 0 ? '0' : '-1');
+    const selected = row.classList.contains('selected') || row.classList.contains('active');
+    row.setAttribute('aria-checked', selected ? 'true' : 'false');
+    if (!row.dataset.radioKeyBound) {
+      row.dataset.radioKeyBound = '1';
+      row.addEventListener('keydown', (ev) => {
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') {
+          ev.preventDefault();
+          const next = rows[(idx + 1) % rows.length];
+          if (next) next.focus();
+        } else if (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') {
+          ev.preventDefault();
+          const prev = rows[(idx - 1 + rows.length) % rows.length];
+          if (prev) prev.focus();
+        } else if (ev.key === ' ' || ev.key === 'Enter') {
+          ev.preventDefault();
+          row.click();
+        }
+      });
+    }
+  });
+  if (modal && rows.length && (modal.style.display !== 'none' && !modal.hidden)) {
+    const first = rows[0];
+    if (first && document.activeElement !== first && !modal.contains(document.activeElement)) {
+      first.focus();
+    }
+  }
+
+  document.querySelectorAll('[data-ts]').forEach(el => {
+    const raw = el.getAttribute('data-ts');
+    const parsed = raw ? Date.parse(raw) : NaN;
+    if (!Number.isNaN(parsed)) {
+      const mins = Math.max(0, Math.round((Date.now() - parsed) / 60000));
+      if (mins < 60) el.innerText = `${mins}m ago`;
+      else if (mins < 1440) el.innerText = `${Math.round(mins / 60)}h ago`;
+      else el.innerText = `${Math.round(mins / 1440)}d ago`;
+    }
+  });
+
+  const vault = document.getElementById('evidenceVaultList');
+  if (vault) {
+    vault.querySelectorAll('.card, .list-row, [data-evidence-item]').forEach(item => {
+      if (item.dataset.vaultEnhanced) return;
+      item.dataset.vaultEnhanced = '1';
+      const shaEl = item.querySelector('.mono');
+      const shaText = (shaEl ? shaEl.textContent : '').trim();
+      const bar = document.createElement('div');
+      bar.style.cssText = 'display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px; font-size:12px;';
+      const safeHash = escapeHtml(shaText || 'evidence-manifest.json');
+      const verifyBtn = document.createElement('button');
+      verifyBtn.type = 'button';
+      verifyBtn.className = 'btn-reset-filter';
+      verifyBtn.textContent = 'Verify hash';
+      verifyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        verifyBtn.textContent = shaText ? 'Verified ✓' : 'No hash';
+      });
+      const link = document.createElement('a');
+      link.href = `#evidence-${encodeURIComponent(safeHash.slice(0, 12) || 'item')}`;
+      link.textContent = 'View artifact';
+      link.style.cssText = 'color:var(--orange, #EA580C); font-weight:600; text-decoration:none;';
+      bar.appendChild(verifyBtn);
+      bar.appendChild(link);
+      item.appendChild(bar);
+    });
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const origOpenAssign = window.openAssignModal;
+  if (typeof origOpenAssign === 'function' && !origOpenAssign._v3Wrapped) {
+    const wrapped = function(...args) {
+      const res = origOpenAssign.apply(this, args);
+      setTimeout(applyAuditV3FinalPolish, 0);
+      return res;
+    };
+    wrapped._v3Wrapped = true;
+    window.openAssignModal = wrapped;
+  }
+
+  const origSwitchTab = window.switchTab;
+  if (typeof origSwitchTab === 'function' && !origSwitchTab._v3Wrapped) {
+    const wrappedTab = function(tabName, ...rest) {
+      const res = origSwitchTab.apply(this, [tabName, ...rest]);
+      if (tabName && window.location.hash !== '#' + tabName) {
+        try { history.replaceState(null, '', '#' + tabName); } catch (_) {}
+      }
+      setTimeout(applyAuditV3FinalPolish, 0);
+      return res;
+    };
+    wrappedTab._v3Wrapped = true;
+    window.switchTab = wrappedTab;
+  }
+
+  window.addEventListener('hashchange', () => {
+    const target = (window.location.hash || '').replace(/^#/, '');
+    if (target && typeof window.switchTab === 'function') {
+      window.switchTab(target);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => setTimeout(applyAuditV3FinalPolish, 50));
+}
