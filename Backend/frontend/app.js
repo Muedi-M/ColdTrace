@@ -306,7 +306,7 @@ const STAFF = [
 
     function renderBatches() {
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
-        <div class="unit-card" onclick="openSimModal('${u.locationId}')">
+        <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">
           <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
             <span>${u.unitName}</span>
             <span style="color:${u.temp > 2 ? 'var(--red)' : 'var(--green)'};">●</span>
@@ -573,7 +573,7 @@ const STAFF = [
     }
 
     function openAssignModal(invId) {
-      if (selectedInvId !== invId) selectedStaff = '';
+      selectedStaff = '';
       selectedInvId = invId;
       const stepEl = document.getElementById('assignStepLabel');
       if (stepEl) stepEl.innerText = `${invId} • Step 1`;
