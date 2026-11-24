@@ -166,6 +166,7 @@ const STAFF = [
     }
 
     function renderHome() {
+  syncDynamicKpisAndChips();
       const flagged = appData.batches.filter(b => b.status === 'Out of range');
       const totalUnits = flagged.reduce((acc, b) => acc + b.units, 0);
       document.getElementById('headerSub').innerText = `${flagged.length} batches affected • ${totalUnits} units`;
@@ -304,7 +305,43 @@ const STAFF = [
       }
     });
 
-    function renderBatches() {
+    function syncDynamicKpisAndChips() {
+  const batches = Array.isArray(appData.batches) ? appData.batches : [];
+  const invs = Array.isArray(appData.investigations) ? appData.investigations : [];
+
+  const flaggedCount = batches.filter(b => b.status === 'Out of range').length;
+  const watchCount = batches.filter(b => b.status === 'Monitoring').length;
+  const heldShipments = new Set(
+    batches
+      .filter(b => b.status === 'Out of range' || b.held)
+      .map(b => b.shipmentId || b.code)
+  ).size;
+
+  const openInvCount = invs.filter(i => String(i.state || '').toLowerCase() !== 'closed').length;
+  const assignedInvCount = invs.filter(i => {
+    const a = String(i.assignee || i.statusText || '').trim().toLowerCase();
+    return a && a !== 'unassigned';
+  }).length;
+
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = String(val);
+  };
+
+  setText('kpiTotalB', batches.length);
+  setText('kpiFlaggedB', flaggedCount);
+  setText('kpiWatchB', watchCount);
+  setText('kpiHeldB', heldShipments);
+  setText('kpiOpenInv', openInvCount);
+  setText('kpiAssignedInv', assignedInvCount);
+
+  const chipText = `${flaggedCount} flagged batch${flaggedCount === 1 ? '' : 'es'} / ${heldShipments} held shipment${heldShipments === 1 ? '' : 's'}`;
+  document.querySelectorAll('[data-ai-chip], .ai-chip').forEach(el => {
+    el.innerText = chipText;
+  });
+}
+
+function renderBatches() {
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
         <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">
           <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
