@@ -208,7 +208,11 @@ const STAFF = [
               <div class="row-icon warn">⚠️</div>
               <div>
                 <div style="font-weight:700; font-size:15.5px;">${b.code}</div>
-                <div style="font-size:12.5px; color:var(--muted);">${b.category} • ${b.product}</div>
+                <div class="batch-sub-pills">
+                    <span class="cat-badge">${escapeHtml(b.category)}</span>
+                    <span class="band-badge">Band ${escapeHtml(tempBandLabel(b.category))}</span>
+                    <span style="font-size:12.5px; color:var(--muted);">${escapeHtml(b.product)}</span>
+                  </div>
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
