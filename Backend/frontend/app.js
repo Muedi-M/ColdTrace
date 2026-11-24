@@ -173,7 +173,12 @@ const STAFF = [
       document.getElementById('tasksRemaining').innerText = `${visTasks.length} remaining ›`;
       document.getElementById('tasksList').innerHTML = visTasks.map(t => {
         const iconCls = t.badgeClass === 'high' ? 'warn' : (t.badgeClass === 'progress' ? 'info' : 'neutral');
-        return `<div class="list-row" tabindex="0" role="button" onclick="openInvestigationDetail('${t.invId}')">
+        const handler = t.action === 'assign'
+          ? `openAssignModal('${escapeHtml(t.invId)}')`
+          : (t.action === 'ai'
+            ? `askNvidiaAI('${escapeHtml(t.invId)}')`
+            : `openInvestigationDetail('${escapeHtml(t.invId)}')`);
+        return `<div class="list-row" tabindex="0" role="button" onclick="${handler}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${handler};}">
           <div class="row-icon ${iconCls}">${t.icon}</div>
           <div class="row-main">
             <div class="row-title">${t.title}</div>
@@ -561,17 +566,27 @@ const STAFF = [
     function openAssignModal(invId) {
       if (selectedInvId !== invId) selectedStaff = '';
       selectedInvId = invId;
-      document.getElementById('assignStepLabel').innerText = `${invId} • Step 1`;
-      document.getElementById('staffList').innerHTML = STAFF.map(s => `
-        <div class="staff-row ${selectedStaff === s.name ? 'selected' : ''}" onclick="selectedStaff='${s.name}'; openAssignModal('${invId}')">
-          <div class="avatar">${s.initials}</div>
+      const stepEl = document.getElementById('assignStepLabel');
+      if (stepEl) stepEl.innerText = `${invId} • Step 1`;
+      const listEl = document.getElementById('staffList');
+      listEl.setAttribute('role', 'radiogroup');
+      listEl.innerHTML = STAFF.map((s, idx) => {
+        const checked = selectedStaff === s.name;
+        const safeName = s.name.replace(/'/g, "\\'");
+        const safeInv = String(invId).replace(/'/g, "\\'");
+        return `
+        <div class="staff-row ${checked ? 'selected' : ''}" role="radio" aria-checked="${checked}" tabindex="${idx === 0 ? '0' : '-1'}" onclick="selectedStaff='${safeName}'; openAssignModal('${safeInv}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectedStaff='${safeName}';openAssignModal('${safeInv}');}">
+          <div class="avatar">${escapeHtml(s.initials)}</div>
           <div>
-            <div style="font-weight:600; font-size:14px;">${s.name}</div>
-            <div style="font-size:12px; color:var(--muted);">${s.role}</div>
+            <div style="font-weight:600; font-size:14px;">${escapeHtml(s.name)}</div>
+            <div style="font-size:12px; color:var(--muted);">${escapeHtml(s.role)}</div>
           </div>
-        </div>
-      `).join('');
-      document.getElementById('assignModal').classList.add('open');
+        </div>`;
+      }).join('');
+      const modalEl = document.getElementById('assignModal');
+      modalEl.classList.add('open');
+      const firstRadio = listEl.querySelector('[role="radio"]');
+      if (firstRadio) firstRadio.focus();
     }
 
     function closeAssignModal() {
