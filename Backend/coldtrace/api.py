@@ -227,21 +227,21 @@ def _tail_series(loc: str, n: int = 14) -> list[float]:
 _ui_store = {
     "datasetFile": _resolve_dataset_path().name if _resolve_dataset_path() else "mock",
     "units": [
-        {"locationId": "JHB-DC01", "shortCode": "U12", "unitName": "Unit 12 (JHB-DC01)", "siteName": "Johannesburg DC • Waterfall", "temp": 8.4, "flaggedCount": 1, "invCode": "INV-2048", "warmestBatch": "7F-442", "series": _tail_series("JHB-DC01")},
-        {"locationId": "DBN-DC02", "shortCode": "U14", "unitName": "Unit 14 (DBN-DC02)", "siteName": "Durban DC • Durban North", "temp": 6.1, "flaggedCount": 1, "invCode": "INV-2047", "warmestBatch": "8A-118", "series": _tail_series("DBN-DC02")},
-        {"locationId": "CPT-DC03", "shortCode": "U22", "unitName": "Unit 22 (CPT-DC03)", "siteName": "Cape Town DC • Cape Town Harbour", "temp": 5.3, "flaggedCount": 1, "invCode": "INV-2046", "warmestBatch": "9C-301", "series": _tail_series("CPT-DC03")},
+        {"locationId": "JHB-DC01", "shortCode": "U12", "unitName": "Unit 12 (JHB-DC01)", "siteName": "Johannesburg DC • Waterfall", "temp": 11.2, "flaggedCount": 1, "invCode": "INV-2048", "warmestBatch": "7F-442", "series": _tail_series("JHB-DC01")},
+        {"locationId": "DBN-DC02", "shortCode": "U14", "unitName": "Unit 14 (DBN-DC02)", "siteName": "Durban DC • Durban North", "temp": 9.8, "flaggedCount": 1, "invCode": "INV-2047", "warmestBatch": "8A-118", "series": _tail_series("DBN-DC02")},
+        {"locationId": "CPT-DC03", "shortCode": "U22", "unitName": "Unit 22 (CPT-DC03)", "siteName": "Cape Town DC • Cape Town Harbour", "temp": 1.2, "flaggedCount": 1, "invCode": "INV-2046", "warmestBatch": "9C-301", "series": _tail_series("CPT-DC03")},
     ],
     "batches": [
-        {"code": "7F-442", "category": "Pharmaceuticals", "product": "Insulin pens", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 4, "arrived": "2026-10-28 00:30", "temp": 8.4, "peak": 8.4, "aboveHours": 18, "sensorId": "JHB-S2", "shipmentId": "SH-7713", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 4, "status": "Out of range", "stageIndex": 2, "series": _tail_series("JHB-DC01")},
-        {"code": "8A-118", "category": "Biologics", "product": "Flu vaccine vials", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 5, "arrived": "2026-10-27 12:30", "temp": 6.1, "peak": 6.1, "aboveHours": 14, "sensorId": "DBN-S1", "shipmentId": "SH-7712", "destination": "Durban North depot", "invId": "INV-2047", "invStatus": "In progress", "handoffs": 3, "status": "Out of range", "stageIndex": 2, "series": _tail_series("DBN-DC02")},
-        {"code": "9C-301", "category": "Pharmaceuticals", "product": "Eye drops", "locationSite": "Cape Town DC (CPT-DC03)", "unitName": "Unit 22", "locationId": "CPT-DC03", "units": 3, "arrived": "2026-10-26 17:30", "temp": 5.3, "peak": 5.3, "aboveHours": 12, "sensorId": "CPT-S2", "shipmentId": "SH-7769", "destination": "Cape Town Harbour pick-up", "invId": "INV-2046", "invStatus": "Under review", "handoffs": 5, "status": "Out of range", "stageIndex": 3, "series": _tail_series("CPT-DC03")},
+        {"code": "7F-442", "category": "Pharmaceuticals", "product": "Insulin pens", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 4, "arrived": "2026-10-28 00:30", "temp": 11.2, "peak": 8.4, "aboveHours": 18, "sensorId": "JHB-S2", "shipmentId": "SH-7713", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 4, "status": "Out of range", "stageIndex": 2, "series": _tail_series("JHB-DC01")},
+        {"code": "8A-118", "category": "Biologics", "product": "Flu vaccine vials", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 5, "arrived": "2026-10-27 12:30", "temp": 9.8, "peak": 6.1, "aboveHours": 14, "sensorId": "DBN-S1", "shipmentId": "SH-7712", "destination": "Durban North depot", "invId": "INV-2047", "invStatus": "In progress", "handoffs": 3, "status": "Out of range", "stageIndex": 2, "series": _tail_series("DBN-DC02")},
+        {"code": "9C-301", "category": "Pharmaceuticals", "product": "Eye drops", "locationSite": "Cape Town DC (CPT-DC03)", "unitName": "Unit 22", "locationId": "CPT-DC03", "units": 3, "arrived": "2026-10-26 17:30", "temp": 1.2, "peak": 5.3, "aboveHours": 12, "sensorId": "CPT-S2", "shipmentId": "SH-7769", "destination": "Cape Town Harbour pick-up", "invId": "INV-2046", "invStatus": "Under review", "handoffs": 5, "status": "Out of range", "stageIndex": 3, "series": _tail_series("CPT-DC03")},
         {"code": "7F-451", "category": "Seafood", "product": "Hake fillets", "locationSite": "Johannesburg DC (JHB-DC01)", "unitName": "Unit 12", "locationId": "JHB-DC01", "units": 9, "arrived": "2026-10-26 20:30", "temp": 1.5, "peak": 1.8, "aboveHours": 0, "sensorId": "JHB-S1", "shipmentId": "SH-7755", "destination": "Waterfall Corner locker", "invId": "INV-2048", "invStatus": "Open", "handoffs": 1, "status": "In range", "stageIndex": 1, "series": [1.1, 1.2, 1.4, 1.3, 1.5, 1.4, 1.5]},
         {"code": "7F-558", "category": "Bakery", "product": "Baked cheesecake", "locationSite": "Durban DC (DBN-DC02)", "unitName": "Unit 14", "locationId": "DBN-DC02", "units": 4, "arrived": "2026-10-25 16:30", "temp": 1.0, "peak": 1.4, "aboveHours": 0, "sensorId": "DBN-S3", "shipmentId": "SH-7724", "destination": "Midrand Hub", "invId": "INV-2045", "invStatus": "Closed", "handoffs": 2, "status": "In range", "stageIndex": 0, "series": [1.1, 1.0, 1.2, 1.1, 0.9, 1.1, 1.0]},
     ],
     "investigations": [
         {
             "id": "INV-2048", "batchCode": "7F-442", "unitName": "Unit 12 (JHB-DC01)", "reason": "COOLING_FAILURE",
-            "temp": 8.4, "units": 4, "statusText": "Unassigned", "state": "Open", "priority": "High", "age": "38m ago",
+            "temp": 11.2, "units": 4, "statusText": "Unassigned", "state": "Open", "priority": "High", "age": "38m ago",
             "assignee": "Unassigned", "shipmentId": "SH-7713", "handoffs": 4, "sha256": "d773916a96ad23f94b6f3c8760e827aaba6b5cd8b509aa83b9c627bfe6b4cb8e",
             "aiSummary": "SUMMARY\n• High-priority open investigation INV-2048 at JHB-DC01 (Unit 12).\n• Labeled dataset telemetry shows temperature drift above safe threshold with reduced cooling load.\n\nAFFECTED INVENTORY\n• 7F-442: 4 insulin pens at risk; shipment SH-7713 placed on hold.",
             "timeline": [
@@ -251,7 +251,7 @@ _ui_store = {
         },
         {
             "id": "INV-2047", "batchCode": "8A-118", "unitName": "Unit 14 (DBN-DC02)", "reason": "TEMP_EXCURSION",
-            "temp": 6.1, "units": 5, "statusText": "Sipho Peters", "state": "In progress", "priority": "Medium", "age": "3h ago",
+            "temp": 9.8, "units": 5, "statusText": "Sipho Peters", "state": "In progress", "priority": "Medium", "age": "3h ago",
             "assignee": "Sipho Peters", "shipmentId": "SH-7712", "handoffs": 3, "sha256": "3ba1a60b88391393658826a166feb4a42a5278f0b5d354aa46382e7730f3eb20",
             "aiSummary": "SUMMARY\n• DBN-DC02 drifted out of band; Sipho Peters assigned to verify door seal and relocate 5 flu vaccine vials.",
             "timeline": [
@@ -260,7 +260,7 @@ _ui_store = {
         },
         {
             "id": "INV-2046", "batchCode": "9C-301", "unitName": "Unit 22 (CPT-DC03)", "reason": "SENSOR_DROPOUT",
-            "temp": 5.3, "units": 3, "statusText": "Aisha Dlamini", "state": "Under review", "priority": "High", "age": "1d ago",
+            "temp": 1.2, "units": 3, "statusText": "Aisha Dlamini", "state": "Under review", "priority": "High", "age": "1d ago",
             "assignee": "Aisha Dlamini", "shipmentId": "SH-7769", "handoffs": 5, "sha256": "3c5517c4fd1ed8d49762458925f240427d8ff36860ad0f5e1924fc8b99f084a0",
             "aiSummary": "SUMMARY\n• Connectivity collapse and frozen readings detected at CPT-DC03; manual probe verification required for batch 9C-301.",
             "timeline": [
@@ -270,8 +270,8 @@ _ui_store = {
     ],
     "tasks": [
         {"icon": "!", "badgeClass": "high", "title": "Assign INV-2048", "sub": "JHB-DC01 • Cooling failure", "badge": "High", "invId": "INV-2048"},
-        {"icon": "👤", "badgeClass": "progress", "title": "Review 8A-118 telemetry", "sub": "DBN-DC02 • Temp excursion", "badge": "In progress", "invId": "INV-2047"},
-        {"icon": "✦", "badgeClass": "neutral", "title": "AI triage INV-2047", "sub": "DBN-DC02 • NVIDIA NIM", "badge": "Next", "invId": "INV-2047"},
+        {"icon": "👤", "badgeClass": "progress", "title": "Review 8A-118 telemetry", "sub": "DBN-DC02 • Temperature excursion", "badge": "In progress", "invId": "INV-2047"},
+        {"icon": "✦", "badgeClass": "neutral", "title": "AI triage INV-2047", "sub": "DBN-DC02 • Temperature excursion", "badge": "Next", "invId": "INV-2047"},
         {"icon": "✓", "badgeClass": "neutral", "title": "Verify CPT-DC03 probe", "sub": "CPT-DC03 • Sensor dropout", "badge": "Pending", "invId": "INV-2046"},
     ]
 }
