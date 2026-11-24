@@ -341,6 +341,18 @@ const STAFF = [
   });
 }
 
+function cycleBatchFilter() {
+  const order = ['All', 'Flagged', 'Watch', 'Cleared'];
+  const cur = typeof batchFilter === 'string' ? batchFilter : 'All';
+  const next = order[(order.indexOf(cur) + 1) % order.length];
+  if (typeof setBatchFilter === 'function') {
+    setBatchFilter(next);
+  } else {
+    batchFilter = next;
+    if (typeof renderBatches === 'function') renderBatches();
+  }
+}
+
 function renderBatches() {
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
         <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">

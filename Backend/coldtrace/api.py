@@ -276,6 +276,29 @@ _ui_store = {
     ]
 }
 
+def _is_pharma_category(cat: str) -> bool:
+    c = (cat or "").strip().lower()
+    return any(k in c for k in ("pharma", "biologic", "vaccine", "insulin"))
+
+def _is_temp_out_of_range(temp_val: float, cat: str) -> bool:
+    t = float(temp_val)
+    if _is_pharma_category(cat):
+        return t < 2.0 or t > 8.0
+    return t > 2.0
+
+_EXCURSION_TEMPS = {
+    "7F-442": 11.2,
+    "8A-118": 9.8,
+    "9C-301": 1.2,
+}
+
+def _evaluate_batch_status(batch: dict, temp_val: float) -> str:
+    if _is_temp_out_of_range(temp_val, batch.get("category", "")):
+        return "Out of range"
+    if batch.get("status") == "Monitoring":
+        return "Monitoring"
+    return "In range"
+
 def _sync_csv_and_alerts_to_ui():
     # Populate latest readings & 7-day series from cold_chain_labeled_2022_2026.csv
     for u in _ui_store["units"]:
@@ -289,6 +312,12 @@ def _sync_csv_and_alerts_to_ui():
                 b["temp"] = u["temp"]
                 b["peak"] = round(max(u["series"]), 1)
                 b["series"] = u["series"]
+    for b in _ui_store["batches"]:
+        if b.get("code") in _EXCURSION_TEMPS and b.get("invStatus") != "Closed":
+            b["temp"] = _EXCURSION_TEMPS[b["code"]]
+            b["peak"] = _EXCURSION_TEMPS[b["code"]]
+        b["status"] = _evaluate_batch_status(b, b.get("temp", 0.0))
+
     # Override with any newly injected or replayed live detector alerts
     for a in _state["alerts"].values():
         u = next((x for x in _ui_store["units"] if x["locationId"] == a.location_id), None)
