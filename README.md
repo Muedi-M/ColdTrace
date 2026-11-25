@@ -12,7 +12,7 @@
 
 🔗 **Live demo:** <https://coldtrace-app-uxg3hjnrfa-uc.a.run.app/>  
 📄 **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)  
-📊 **Presentation Deck:** *Adding link before submission (see `PROJECT_DOCS/`)*  
+📊 **Presentation Deck (11 slides):** [PROJECT_DOCS/ColdTrace_Cold-Chain_Operations.pdf](PROJECT_DOCS/ColdTrace_Cold-Chain_Operations.pdf)  
 🎥 **Recorded Walkthrough (3–5 min):** *Adding link before submission*
 
 ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
