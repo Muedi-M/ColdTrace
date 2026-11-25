@@ -1,4 +1,5 @@
 from __future__ import annotations
+from coldtrace.storage import storage_status
 from fastapi.staticfiles import StaticFiles
 """FastAPI service for Cloud Run.  uvicorn coldtrace.api:app --host 0.0.0.0 --port 8080
 
@@ -73,7 +74,7 @@ class SensorEvent(BaseModel):
 
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "locations": LOCATIONS}
+    return {"ok": True, "locations": LOCATIONS, "storage": storage_status()}
 
 
 @app.post("/ingest", dependencies=[Depends(require_key)])

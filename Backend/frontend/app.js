@@ -407,7 +407,52 @@ function renderCategoryFilterBar(totalCount, filteredCount) {
   `;
 }
 
+function reconcileAuditContradictions() {
+  const batches = Array.isArray(appData.batches) ? appData.batches : [];
+  const units = Array.isArray(appData.units) ? appData.units : [];
+  const invs = Array.isArray(appData.investigations) ? appData.investigations : [];
+
+  // Keep unit temperature consistent with any flagged batch in that unit
+  units.forEach(u => {
+    const unitCode = u.locationId || u.unitId || u.unitName || '';
+    const flaggedInUnit = batches.filter(b =>
+      b.status === 'Out of range' &&
+      (b.locationId === unitCode || b.unit === u.unitName || b.unitId === u.unitId)
+    );
+    if (flaggedInUnit.length) {
+      const maxExcursion = Math.max(...flaggedInUnit.map(b => Number(b.temp ?? b.peak ?? u.temp)).filter(Number.isFinite));
+      if (Number.isFinite(maxExcursion) && maxExcursion > Number(u.temp ?? -999)) {
+        u.temp = maxExcursion;
+      }
+    }
+  });
+
+  const flaggedBatches = batches.filter(b => b.status === 'Out of range');
+  const heldCount = new Set(
+    batches
+      .filter(b => b.status === 'Out of range' || b.held || String(b.shipmentStatus || '').toLowerCase().includes('hold'))
+      .map(b => b.shipmentId || b.code)
+  ).size;
+
+  const assignedCount = invs.filter(i => {
+    const assignee = String(i.assignee || '').trim();
+    return assignee && assignee.toLowerCase() !== 'unassigned';
+  }).length;
+
+  const openCount = invs.filter(i => String(i.state || i.status || '').trim().toLowerCase() !== 'closed').length;
+
+  const setNum = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = String(val);
+  };
+  setNum('kpiFlaggedB', flaggedBatches.length);
+  setNum('kpiHeldB', heldCount);
+  setNum('kpiAssignedInv', assignedCount);
+  setNum('kpiOpenInv', openCount);
+}
+
 function renderBatches() {
+  reconcileAuditContradictions();
       document.getElementById('storageUnitsGrid').innerHTML = appData.units.map(u => `
         <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">
           <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
@@ -846,7 +891,8 @@ function applyAuditV3FinalPolish() {
       link.style.cssText = 'color:var(--orange, #EA580C); font-weight:600; text-decoration:none;';
       bar.appendChild(verifyBtn);
       bar.appendChild(link);
-      item.appendChild(bar);
+      const targetContainer = item.querySelector('.row-main') || item;
+      targetContainer.appendChild(bar);
     });
   }
 }

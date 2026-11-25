@@ -213,6 +213,25 @@
     .btn-reset-filter { background: transparent; border: 1px solid var(--border, #CBD5E1); border-radius: 8px; padding: 4px 9px; font-size: 11.5px; font-weight: 600; color: var(--text, #0F172A); cursor: pointer; }
     .btn-reset-filter:hover { background: #F1F5F9; }
 
+  
+    /* Prevent long SHA-256 hashes from overflowing narrow viewports */
+    .mono, [data-hash], .evidence-hash { overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+
+
+    /* Responsive SHA-256 Evidence Vault rows & mobile table scroll */
+    #evidenceVaultList .list-row { flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+    #evidenceVaultList .row-main { flex: 1 1 220px; min-width: 0; }
+    #evidenceVaultList .row-title { white-space: normal; word-break: break-word; }
+    #evidenceVaultList .row-sub.mono {
+      display: block;
+      width: 100%;
+      font-size: 11.5px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
+    #evidenceVaultList .badge { flex-shrink: 0; margin-left: auto; }
+    .table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   </style>
 </head>
 <body>

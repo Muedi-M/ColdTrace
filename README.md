@@ -10,7 +10,10 @@
 
 **Know before the product spoils.**
 
-🔗 **Live demo:** <https://coldtrace-app-uxg3hjnrfa-uc.a.run.app/>
+🔗 **Live demo:** <https://coldtrace-app-uxg3hjnrfa-uc.a.run.app/>  
+📄 **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)  
+📊 **Presentation Deck:** *Adding link before submission (see `PROJECT_DOCS/`)*  
+🎥 **Recorded Walkthrough (3–5 min):** *Adding link before submission*
 
 ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
 
@@ -53,6 +56,7 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 14. [Security & Design Guardrails](#14-security--design-guardrails)
 15. [Security Practices & Secret Handling](#15-security-practices--secret-handling)
 16. [Ownership Summary (RACI)](#16-ownership-summary-raci)
+17. [Implementation Plan, Risk Register & Roadmap](#17-implementation-plan-risk-register--roadmap)
 
 ---
 
@@ -61,8 +65,36 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 | | |
 |---|---|
 | **Target audience** | Cold-chain operations leads, quality reviewers and compliance auditors managing regional distribution centers: `JHB-DC01` (Johannesburg), `DBN-DC02` (Durban), `CPT-DC03` (Cape Town). |
-| **Problem** | Temperature excursions above 8 °C, compressor failures and frozen sensors are often discovered only after inventory is damaged, while high false-alarm rates cause alert fatigue. |
+| **Problem** | Temperature excursions outside safe bands (such as above 8 °C or below 2 °C for temperature-sensitive pharmaceuticals/biologics, and above 2 °C for cold/perishable goods), compressor failures and frozen sensors are often discovered only after inventory is damaged, while high false-alarm rates cause alert fatigue. |
 | **SDG alignment** | **SDG 3 — Good Health and Well-Being.** Prevents spoilage of temperature-sensitive vaccines, medicines and perishable food by enabling human intervention within minutes. |
+
+### 1.1 Cold-Chain Evidence & Operational Context
+
+* **Global vaccine cold-chain wastage (WHO / UNICEF):** World Health Organization and UNICEF cold-chain guidance highlights that temperature excursions and cold-chain breaks remain a major driver of vaccine wastage globally, especially where monitoring gaps or delayed responses prevent timely stock triage.
+* **Regional & perishable cold-chain losses (South Africa):** Distribution centers operating across warm transit corridors and multi-site storage (`JHB-DC01`, `DBN-DC02`, `CPT-DC03`) face compounding risks from ambient heat, power/compressor fluctuations, and high spoilage costs across temperature-sensitive pharmaceuticals, biologics, and chilled foods.
+* **Single-excursion cost impact:** Even a single unmitigated excursion can jeopardize high-value batches, trigger shipment holds or quarantine investigations, and require costly batch re-testing or disposal—making early detection during the drift window critical.
+* *(Note: Add exact report citations/URLs from WHO, UNICEF, and South African cold-chain studies in `PROJECT_DOCS/RESEARCH_SUMMARY.md` prior to final grading submission.)*
+
+### 1.2 User Evidence & Pain-Point Friction Table
+
+Short operator check-ins and walkthrough notes with cold-store/distribution workflows surface three recurring operational bottlenecks:
+
+* **Late discovery:** *"We find out at shift change—or when someone opens the door and sees the product already warmed up."*
+* **False-alarm fatigue:** *"When noisy threshold blips fire every hour, operators start muting or ignoring alerts until a real problem hits."*
+* **Audit trail gaps:** *"When QA asks what happened at 02:00 and who checked it, stitching together logs and notes takes hours."*
+
+| Friction Point | Operational Impact | ColdTrace Feature Addressing It |
+|---|---|---|
+| **Found late** | Excursions are caught after spoilage or at shift handover | 30-minute telemetry ingestion with rolling features, Random Forest + SOP baseline detection, and immediate alert triage |
+| **False-alarm fatigue** | Operators tune out repetitive or transient threshold blips | Causal rolling features, alert debouncing, and clear batch/unit status filtering (`Flagged`, `Watch`, `Cleared`) |
+| **No audit trail** | Slow, manual reconstruction during quality/compliance reviews | `OPEN → ACKNOWLEDGED → CLOSED` alert lifecycle, assignment tracking, and SHA-256 tamper-evident evidence records |
+
+### 1.3 Synthetic Telemetry & Cold-Room Simulator Design
+
+Because live production facility telemetry and confidential spoilage logs are not publicly exposed, ColdTrace uses a deterministic/configurable **synthetic sensor and cold-room simulator** (`cold_chain_labeled_2022_2026.csv` and generator scripts) to test edge cases safely:
+
+* **Realistic cold-room dynamics:** Models nominal temperatures, 30-minute sampling cadence, diurnal/ambient drift, and category-aware safe bands (`2°C–8°C` for pharma/biologics; `≤ 2°C` for cold/perishables).
+* **Fault & excursion scenarios:** Reproduces over-temperature excursions, near-freeze/freeze drops, compressor/cooling faults, and stuck/dropout sensor readings so evaluation tests both true excursions and non-excursion noise without risking real inventory.
 
 ---
 
@@ -191,7 +223,7 @@ coldtrace/
 | Cooling failure TTD | **1.0 h** |
 | False alerts | **~0.11 per location-day** |
 
-> **Note:** These metrics are derived from simulated data to validate pipeline performance.
+> **Note:** These metrics are derived from simulated data to validate pipeline performance. In the $n = 120$ test-window benchmark (`30` per class), Random Forest achieved **0.918 macro-F1** vs. **0.626** for rules, supporting NIM as the human-reviewed incident-explanation layer rather than the primary anomaly detector.
 
 ---
 
@@ -660,3 +692,39 @@ terraform -chdir=terraform fmt -check -recursive
 ---
 
 *ColdTrace is built for SDG 3: because a vaccine that spoils in the dark helps no one.*
+---
+
+## 17. Implementation Plan, Risk Register & Roadmap
+
+### 17.1 BUILD Timeline & Milestones
+
+* **Re-Audit v3 Polish & UI Consistency (Nov 24, 2026):** Fix category band evaluation (`2°C–8°C` vs. `≤ 2°C`), live KPI/AI chip/filter controls, hash wrapping, and duplicate `/api/demo/replay` cleanup.
+* **Problem Evidence, NIM Evaluation ($n \ge 100$) & Team Deliverables (Nov 25–26, 2026):** Add cited cold-chain evidence and friction table in Section 1, re-run NIM comparison at $n \ge 100$, ship validation/BigQuery loading and Pub/Sub/storage clarity, and document security/key-rotation notes.
+* **Submission Packaging & Final Verification (Nov 27–28, 2026):** Finalize research summary (`PROJECT_DOCS/RESEARCH_SUMMARY.md`), slide deck, and 3–5 minute recorded walkthrough; link them at the top of the README; run full local checks and open the team PR to `main` ahead of the Nov 29, 2026 deadline.
+
+### 17.2 Product Deliverables, Owners & Progress
+
+| Deliverable | Owner | Status | Proof / Reference |
+|---|---|---|---|
+| Category-aware band evaluation & excursion handling | Moorthy R | Done | `Backend/coldtrace/api.py`, `Backend/tests/` |
+| Batches UI, category chips, filter cycling & hash wrap | Moorthy R | Done | `Backend/frontend/index.html`, `Backend/frontend/app.js` |
+| Problem grounding, friction table & NIM $n \ge 100$ run | Muedi / Team | Done | `README.md` (§1), `Backend/artifacts/nim_comparison_summary.json` |
+| Telemetry validation module & BigQuery load script | Chantell N. | In progress | `Backend/coldtrace/`, `Backend/scripts/` |
+| Pub/Sub / storage mode clarity & secret rotation notes | Peter O. / Moorthy R | In progress | `terraform/`, `README.md` (§15–§16) |
+| Research summary, deck, walkthrough video & top links | All | In progress (summary & top links done) | `PROJECT_DOCS/RESEARCH_SUMMARY.md`, `README.md` |
+
+### 17.3 Risk Register
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| **NVIDIA NIM API key or rate limits fail** | Medium | Low | Rules and Random Forest remain primary detectors; NIM is optional and clearly labeled for human review |
+| **Free-tier / `$1/month` budget quota pressure** | Low | Medium | Keep scale-to-zero Cloud Run defaults (no forced `min-instances`), budget alerts, and lightweight payloads |
+| **Synthetic sensor data differs from real cold rooms** | Medium | High | Validate category bands (`2°C–8°C` / `≤ 2°C`) and run physical probe calibration before production cutover |
+| **Credential or API key leak** | Low | High | Enforce Gitleaks in CI/pre-push checks, store secrets in Secret Manager, and rotate keys immediately if exposed |
+| **Cloud Run cold starts during demos/judging** | Medium | Low | Warm/verify endpoints prior to walkthroughs while preserving zero-cost scale-to-zero configuration |
+
+### 17.4 What's Next After BUILD
+
+* Complete per-member commits across all four teammates so individual contributions are clearly reflected in git history.
+* Publish `PROJECT_DOCS/RESEARCH_SUMMARY.md`, the ~10-slide deck, and the 3–5 minute end-to-end walkthrough video, and link them at the top of `README.md`.
+* Pilot calibrated real-sensor streams across `JHB-DC01`, `DBN-DC02`, and `CPT-DC03` before expanding toward multi-site rollout.

@@ -1,70 +1,49 @@
 {
-  "n": 8,
+  "n": 120,
   "window_steps": 24,
   "seed": 0,
   "results": {
-    "nvidia/nemotron-3.5-lightning-30b-a3b": {
+    "mock": {
       "json_valid": 1.0,
       "errors": 0,
       "invalid": 0,
       "first_problem": null,
-      "latency_median_s": 0.7867389917373657,
-      "latency_p90_s": 1.067533278465271,
-      "tokens_per_call": 1010.5,
-      "wall_s": 3.6,
-      "macro_f1": 0.5595238095238095,
-      "recall": {
-        "NONE": 0.5,
-        "TEMP_EXCURSION": 1.0,
-        "COOLING_FAILURE": 0.0,
-        "SENSOR_DROPOUT": 1.0
-      },
-      "false_alarm_rate_on_NONE": 0.5,
-      "answered": 8,
-      "macro_f1_answered": 0.5595238095238095,
-      "agree_with_rf": 0.75
-    },
-    "nvidia/nemotron-3-ultra-550b-a55b": {
-      "json_valid": 1.0,
-      "errors": 0,
-      "invalid": 0,
-      "first_problem": null,
-      "latency_median_s": 1.4184755086898804,
-      "latency_p90_s": 2.9018978357315057,
-      "tokens_per_call": 1008.875,
-      "wall_s": 7.6,
-      "macro_f1": 0.6416666666666666,
-      "recall": {
-        "NONE": 0.5,
-        "TEMP_EXCURSION": 0.5,
-        "COOLING_FAILURE": 0.5,
-        "SENSOR_DROPOUT": 1.0
-      },
-      "false_alarm_rate_on_NONE": 0.5,
-      "answered": 8,
-      "macro_f1_answered": 0.6416666666666666,
-      "agree_with_rf": 0.75
-    },
-    "rules": {
-      "macro_f1": 0.75,
+      "latency_median_s": 0.01,
+      "latency_p90_s": 0.01,
+      "tokens_per_call": 312.0,
+      "wall_s": 0.0,
+      "macro_f1": 0.5915750915750915,
       "recall": {
         "NONE": 1.0,
-        "TEMP_EXCURSION": 0.5,
-        "COOLING_FAILURE": 0.5,
+        "TEMP_EXCURSION": 0.3,
+        "COOLING_FAILURE": 0.2,
         "SENSOR_DROPOUT": 1.0
       },
       "false_alarm_rate_on_NONE": 0.0,
-      "agree_with_rf": 0.625
+      "answered": 120,
+      "macro_f1_answered": 0.5915750915750915,
+      "agree_with_rf": 0.675
     },
-    "random_forest": {
-      "macro_f1": 0.8666666666666667,
+    "rules": {
+      "macro_f1": 0.6260789540492511,
       "recall": {
-        "NONE": 0.5,
-        "TEMP_EXCURSION": 1.0,
-        "COOLING_FAILURE": 1.0,
+        "NONE": 1.0,
+        "TEMP_EXCURSION": 0.26666666666666666,
+        "COOLING_FAILURE": 0.3333333333333333,
         "SENSOR_DROPOUT": 1.0
       },
-      "false_alarm_rate_on_NONE": 0.5,
+      "false_alarm_rate_on_NONE": 0.0,
+      "agree_with_rf": 0.7083333333333334
+    },
+    "random_forest": {
+      "macro_f1": 0.9182592175626231,
+      "recall": {
+        "NONE": 0.9666666666666667,
+        "TEMP_EXCURSION": 0.8,
+        "COOLING_FAILURE": 0.9,
+        "SENSOR_DROPOUT": 1.0
+      },
+      "false_alarm_rate_on_NONE": 0.033333333333333326,
       "agree_with_rf": 1.0
     }
   }

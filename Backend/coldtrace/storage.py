@@ -57,3 +57,12 @@ def query_bigquery_summary() -> list[dict[str, Any]]:
         return [dict(row) for row in _bq_client.query(sql).result()]
     except Exception:
         return []
+def storage_status() -> dict[str, Any]:
+    use_fs = os.getenv("USE_FIRESTORE", "false").lower() == "true"
+    use_bq = os.getenv("USE_BIGQUERY", "false").lower() == "true"
+    topic = os.getenv("PUBSUB_TOPIC", "") or os.getenv("TELEMETRY_TOPIC", "")
+    return {
+        "firestore": "enabled" if use_fs else "in-memory-simulated",
+        "bigquery": "enabled" if use_bq else "disabled",
+        "pubsub_topic": topic or "provisioned-via-terraform-only",
+    }
