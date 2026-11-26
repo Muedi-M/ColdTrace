@@ -260,12 +260,12 @@ _ui_store = {
             ]
         },
         {
-            "id": "INV-2046", "batchCode": "9C-301", "unitName": "Unit 22 (CPT-DC03)", "reason": "SENSOR_DROPOUT",
+            "id": "INV-2046", "batchCode": "9C-301", "unitName": "Unit 22 (CPT-DC03)", "reason": "TEMP_EXCURSION",
             "temp": 1.2, "units": 3, "statusText": "Aisha Dlamini", "state": "Under review", "priority": "High", "age": "1d ago",
             "assignee": "Aisha Dlamini", "shipmentId": "SH-7769", "handoffs": 5, "sha256": "3c5517c4fd1ed8d49762458925f240427d8ff36860ad0f5e1924fc8b99f084a0",
-            "aiSummary": "SUMMARY\n• Connectivity collapse and frozen readings detected at CPT-DC03; manual probe verification required for batch 9C-301.",
+            "aiSummary": "SUMMARY\n• Temperature excursion (1.2°C) detected on batch 9C-301 at CPT-DC03 (Unit 22); Aisha Dlamini reviewing storage band compliance.",
             "timeline": [
-                {"icon": "⚠️", "tone": "warn", "title": "Batch 9C-301 flagged", "detail": "Sensor dropout detected in CPT-DC03", "source": "ColdChain rules", "time": "2026-10-27 20:00"}
+                {"icon": "⚠️", "tone": "warn", "title": "Batch 9C-301 flagged", "detail": "Temperature excursion (1.2°C) detected in CPT-DC03", "source": "ColdChain rules", "time": "2026-10-27 20:00"}
             ]
         }
     ],
@@ -273,7 +273,7 @@ _ui_store = {
         {"icon": "!", "badgeClass": "high", "title": "Assign INV-2048", "sub": "JHB-DC01 • Cooling failure", "badge": "High", "invId": "INV-2048"},
         {"icon": "👤", "badgeClass": "progress", "title": "Review 8A-118 telemetry", "sub": "DBN-DC02 • Temperature excursion", "badge": "In progress", "invId": "INV-2047"},
         {"icon": "✦", "badgeClass": "neutral", "title": "AI triage INV-2047", "sub": "DBN-DC02 • Temperature excursion", "badge": "Next", "invId": "INV-2047"},
-        {"icon": "✓", "badgeClass": "neutral", "title": "Verify CPT-DC03 probe", "sub": "CPT-DC03 • Sensor dropout", "badge": "Pending", "invId": "INV-2046"},
+        {"icon": "✓", "badgeClass": "neutral", "title": "Review 9C-301 excursion", "sub": "CPT-DC03 • Temperature excursion", "badge": "Pending", "invId": "INV-2046"},
     ]
 }
 
