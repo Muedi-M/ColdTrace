@@ -12,7 +12,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from . import nim
@@ -158,7 +158,45 @@ def close_alert(alert_id: str):
     alert.state = "CLOSED"
     return {"status": "closed", "alert_id": alert_id}
 
-@app.post("/api/demo/replay", dependencies=[Depends(require_key)])
+def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="")) -> None:
+    """Allow valid X-API-Key or same-origin browser console requests on /api/demo/replay."""
+    try:
+        require_key(x_api_key=x_api_key)
+        return
+    except HTTPException as exc:
+        if exc.status_code != 401:
+            raise
+    host = (request.url.hostname or "").lower()
+    origin = (request.headers.get("origin") or "").lower()
+    referer = (request.headers.get("referer") or "").lower()
+    if host and (
+        f"://{host}" in origin
+        or f"://{host}" in referer
+        or (host in {"localhost", "127.0.0.1"} and not origin and not referer)
+    ):
+        return
+    raise HTTPException(401, "invalid or missing X-API-Key")
+
+def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="")) -> None:
+    """Allow valid X-API-Key or same-origin browser console requests on /api/demo/replay."""
+    try:
+        require_key(x_api_key=x_api_key)
+        return
+    except HTTPException as exc:
+        if exc.status_code != 401:
+            raise
+    host = (request.url.hostname or "").lower()
+    origin = (request.headers.get("origin") or "").lower()
+    referer = (request.headers.get("referer") or "").lower()
+    if host and (
+        f"://{host}" in origin
+        or f"://{host}" in referer
+        or (host in {"localhost", "127.0.0.1"} and not origin and not referer)
+    ):
+        return
+    raise HTTPException(401, "invalid or missing X-API-Key")
+
+@app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
 def trigger_demo_replay():
     csv_path = Path(__file__).resolve().parent.parent / "data" / "sample_14d.csv"
     if not csv_path.exists():
@@ -184,7 +222,6 @@ def trigger_demo_replay():
 # --- Cold Chain Alerts Video UI Endpoints (Backed by cold_chain_labeled_2022_2026.csv) ---
 import csv
 from pathlib import Path
-from fastapi import Request
 
 def _resolve_dataset_path() -> Path | None:
     base = Path(__file__).resolve().parent.parent / "data"
@@ -342,7 +379,7 @@ def get_video_ui_state():
     _sync_csv_and_alerts_to_ui()
     return _ui_store
 
-@app.post("/api/demo/replay", dependencies=[Depends(require_key)])
+@app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
 def replay_labeled_csv():
     path = _resolve_dataset_path()
     if not path:
