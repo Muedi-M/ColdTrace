@@ -238,7 +238,7 @@ coldtrace/
 
 ### 5.1 DevOps & Cloud Owner — Moorthy R
 
-**Contact:** `moorthyrtmp@gmail.com`
+**GitHub:** `@MOORTHYrm`
 
 **Roles**
 - Project Owner
@@ -254,7 +254,7 @@ coldtrace/
 
 ### 5.2 Data Analyst — Chantell Ntokozo
 
-**Contact:** `ntokozochantell396@gmail.com`
+**GitHub:** `@ntokozochantell396-lab`
 
 **Roles**
 - `roles/bigquery.jobUser` (project-level)
@@ -268,7 +268,7 @@ coldtrace/
 
 ### 5.3 AI & Cloud Foundation Engineer — Mbambala T
 
-**Contact:** `mbambalat@gmail.com`
+**GitHub:** `@Muedi-M`
 
 **Roles (project-level)**
 - `roles/run.developer`
@@ -290,7 +290,7 @@ coldtrace/
 
 ### 5.4 Cyber Security Reviewer — Peter Opiyo
 
-**Contact:** `drpeteropiyo@gmail.com`
+**GitHub:** `@PeterOpiyo240`
 
 **Roles (project-level, read-only)**
 - `roles/iam.securityReviewer`
@@ -457,7 +457,19 @@ Dataset: **`coldtrace_warehouse`** (BigQuery)
    ```
 3. **Access:** only the Data Analyst has write access (`dataEditor`, dataset-scoped). Everyone else is read-only; the Cloud Run runtime reads and queries only.
 4. **Validation:** confirm 30-minute cadence, schema conformity and flat-run sensor dropouts before data is trusted for trend analysis.
+5. **Data Sources (Synthetic Telemetry):**
+   - Primary historical benchmark dataset: `cold_chain_labeled_2022_2026.csv` (labeled multi-year cold-chain events across simulated storage units `JHB-DC01`, `DBN-DC02`, and `CPT-DC03`).
+   - Validation sample dataset: `sample_14d.csv` (14-day telemetry slice at 30-minute intervals, 2,016 total records) evaluated against the Pharmaceutical cold-chain safe band (`2°C–8°C`).
+   - All sensor streams, batch records, and facility identifiers are 100% synthetic and contain no real patient, clinical, or proprietary warehouse data.
 
+6. **Validation Checks & Audit Summary:**
+   - **Schema & Completeness:** Verified required columns, timestamp continuity, and non-null keys (`2,016` rows processed in `sample_14d`, `0` quarantined rows).
+   - **Threshold & Anomaly Rules:** Flagged out-of-range excursions outside `2°C–8°C` (`188` exception alerts) and flat-run/missing sensor telemetry (`48.0` total dropout hours).
+   - **Cross-Store Reconciliation:** Verified row-count parity between operational Firestore collections and `coldtrace_warehouse` BigQuery tables during CSV feed replay.
+
+7. **Known Gaps & Limitations:**
+   - **Simulated Telemetry:** Data reflects synthetic fault injection (`TEMP_EXCURSION`, `COOLING_FAILURE`, `SENSOR_DROPOUT`) rather than live physical IoT sensor hardware; real-world deployment requires sensor calibration and drift monitoring.
+   - **Illustrative Schema Note:** Column names in documentation examples (`temperature_c`, `location_id`) are illustrative and should be verified against deployed table schemas prior to running ad-hoc queries.
 > Table and column names above are illustrative; match them to the deployed schema.
 
 ---
