@@ -198,9 +198,9 @@ def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="
 
 @app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
 def trigger_demo_replay():
-    csv_path = Path(__file__).resolve().parent.parent / "data" / "sample_14d.csv"
+    csv_path = Path(__file__).resolve().parent.parent / "data" / "cold_chain_labeled_2022_2026.csv"
     if not csv_path.exists():
-        raise HTTPException(404, "sample_14d.csv not found")
+        raise HTTPException(404, "cold_chain_labeled_2022_2026.csv not found")
     with csv_path.open("r", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             loc = row["Storage_Location_ID"]
@@ -225,7 +225,7 @@ from pathlib import Path
 
 def _resolve_dataset_path() -> Path | None:
     base = Path(__file__).resolve().parent.parent / "data"
-    for name in ("cold_chain_labeled_2022_2026.csv", "sample_14d.csv"):
+    for name in ("cold_chain_labeled_2022_2026.csv", "cold_chain_labeled_2022_2026.csv"):
         p = base / name
         if p.exists():
             return p

@@ -15,7 +15,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--data", default="data/sample_14d.csv")
+ap.add_argument("--data", default="data/cold_chain_labeled_2022_2026.csv")
 ap.add_argument("--url", default="http://localhost:8080")
 ap.add_argument("--key", default=os.getenv("INGEST_API_KEY", ""))
 ap.add_argument("--model", default=os.getenv("MODEL_PATH", "artifacts/coldtrace_rf.joblib"))
