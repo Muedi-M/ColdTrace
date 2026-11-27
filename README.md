@@ -457,21 +457,21 @@ Dataset: **`coldtrace_warehouse`** (BigQuery)
    ```
 3. **Access:** only the Data Analyst has write access (`dataEditor`, dataset-scoped). Everyone else is read-only; the Cloud Run runtime reads and queries only.
 4. **Validation:** confirm 30-minute cadence, schema conformity and flat-run sensor dropouts before data is trusted for trend analysis.
-5. **Data Sources (Synthetic Telemetry):**
-   - Primary historical benchmark dataset: `cold_chain_labeled_2022_2026.csv` (labeled multi-year cold-chain events across simulated storage units `JHB-DC01`, `DBN-DC02`, and `CPT-DC03`).
-   - Validation sample dataset: `sample_14d.csv` (14-day telemetry slice at 30-minute intervals, 2,016 total records) evaluated against the Pharmaceutical cold-chain safe band (`2°C–8°C`).
+   5. **Data Sources (Synthetic Telemetry):**
+   - **Primary historical benchmark dataset:** `cold_chain_labeled_2022_2026.csv` (`coldtrace_warehouse.telemetry_2022_2026` — 254,160 total records at 30-minute intervals, 84,720 rows each across simulated storage units `JHB-DC01`, `DBN-DC02`, and `CPT-DC03`).
+   - **Validation sample dataset:** `sample_14d.csv` (14-day telemetry slice at 30-minute intervals, 2,016 total records) evaluated against the Pharmaceutical cold-chain safe band (`2°C–8°C`).
    - All sensor streams, batch records, and facility identifiers are 100% synthetic and contain no real patient, clinical, or proprietary warehouse data.
 
 6. **Validation Checks & Audit Summary:**
-   - **Schema & Completeness:** Verified required columns, timestamp continuity, and non-null keys (`2,016` rows processed in `sample_14d`, `0` quarantined rows).
-   - **Threshold & Anomaly Rules:** Flagged out-of-range excursions outside `2°C–8°C` (`188` exception alerts) and flat-run/missing sensor telemetry (`48.0` total dropout hours).
+   - **Schema & Completeness:** Verified required columns, timestamp continuity, and non-null keys across both `sample_14d` (2,016 rows, 0 quarantined rows) and `telemetry_2022_2026` (254,160 rows, 0 null critical fields, 0 quarantined/out-of-range rows, and 0 null `Exception_Type` values).
+   - **Threshold & Anomaly Rules (`2°C–8°C` Safe Band):**
+     - `sample_14d`: Flagged 188 exception alerts and 48.0 total dropout hours.
+     - `telemetry_2022_2026`: Flagged 1,468 safe-band excursions (0.58% — `DBN-DC02`: 755, `JHB-DC01`: 367, `CPT-DC03`: 346) alongside labeled exceptions (`NONE`: 236,696 [93.13%], `SENSOR_DROPOUT`: 9,943 [3.91%], `COOLING_FAILURE`: 4,262 [1.68%], `TEMP_EXCURSION`: 3,259 [1.28%]).
    - **Cross-Store Reconciliation:** Verified row-count parity between operational Firestore collections and `coldtrace_warehouse` BigQuery tables during CSV feed replay.
 
 7. **Known Gaps & Limitations:**
    - **Simulated Telemetry:** Data reflects synthetic fault injection (`TEMP_EXCURSION`, `COOLING_FAILURE`, `SENSOR_DROPOUT`) rather than live physical IoT sensor hardware; real-world deployment requires sensor calibration and drift monitoring.
-   - **Illustrative Schema Note:** Column names in documentation examples (`temperature_c`, `location_id`) are illustrative and should be verified against deployed table schemas prior to running ad-hoc queries.
-> Table and column names above are illustrative; match them to the deployed schema.
-
+   - **Verified Warehouse Schema:** Documentation examples may reference shorthand names (`temperature_c`, `location_id`), whereas the deployed BigQuery warehouse (`coldtrace_warehouse.telemetry_2022_2026`) uses `Warehouse_Temperature_C`, `Warehouse_Humidity_Percent`, `Cooling_Load_Percent`, `Sensor_Connectivity`, `Exception_Type`, `Storage_Location_ID`, and `Timestamp` (enforced in `Validation_coldtrace.sql`).
 ---
 
 ## 10. Environment Configuration & Secrets
