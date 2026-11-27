@@ -50,3 +50,59 @@ SELECT
 FROM ordered_readings
 GROUP BY location_id
 ORDER BY location_id;
+
+
+
+-- ============================================================================
+-- ColdTrace Warehouse Telemetry Validation Suite (2022–2026 Full Dataset)
+-- Table: project-6b73a1f9-ef42-4074-81a.coldtrace_warehouse.telemetry_2022_2026
+-- ============================================================================
+
+-- 5. Full Dataset Row Count, Critical Nulls & Date Span
+SELECT
+  COUNT(*) AS total_rows,
+  COUNTIF(Timestamp IS NULL OR Storage_Location_ID IS NULL OR Warehouse_Temperature_C IS NULL) AS null_critical_fields,
+  MIN(Timestamp) AS min_timestamp,
+  MAX(Timestamp) AS max_timestamp
+FROM `project-6b73a1f9-ef42-4074-81a.coldtrace_warehouse.telemetry_2022_2026`;
+
+-- 6. Warehouse Safe-Band Excursion Check (<2.0°C or >8.0°C) by Hub
+SELECT
+  Storage_Location_ID,
+  COUNTIF(Warehouse_Temperature_C < 2.0 OR Warehouse_Temperature_C > 8.0) AS excursion_rows,
+  COUNTIF(Warehouse_Temperature_C < 2.0) AS below_2c_rows,
+  COUNTIF(Warehouse_Temperature_C > 8.0) AS above_8c_rows,
+  ROUND(MIN(Warehouse_Temperature_C), 2) AS min_wh_temp_c,
+  ROUND(MAX(Warehouse_Temperature_C), 2) AS max_wh_temp_c,
+  ROUND(AVG(Warehouse_Temperature_C), 2) AS avg_wh_temp_c
+FROM `project-6b73a1f9-ef42-4074-81a.coldtrace_warehouse.telemetry_2022_2026`
+GROUP BY Storage_Location_ID
+ORDER BY Storage_Location_ID;
+
+-- 7. Labeled Exception Counts
+SELECT
+  Exception_Type,
+  COUNT(*) AS record_count
+FROM `project-6b73a1f9-ef42-4074-81a.coldtrace_warehouse.telemetry_2022_2026`
+GROUP BY Exception_Type
+ORDER BY record_count DESC;
+
+-- 8. Quarantine & Physical Sensor Range Check
+SELECT
+  COUNT(*) AS total_rows,
+  COUNTIF(
+    Timestamp IS NULL
+    OR Storage_Location_ID IS NULL
+    OR Warehouse_Temperature_C IS NULL
+    OR Warehouse_Humidity_Percent IS NULL
+    OR Cooling_Load_Percent IS NULL
+    OR Sensor_Connectivity IS NULL
+    OR Warehouse_Temperature_C < -50.0
+    OR Warehouse_Temperature_C > 60.0
+    OR Warehouse_Humidity_Percent < 0.0
+    OR Warehouse_Humidity_Percent > 100.0
+    OR Sensor_Connectivity < 0.0
+    OR Sensor_Connectivity > 100.0
+  ) AS quarantine_rows,
+  COUNTIF(Exception_Type IS NULL) AS null_exception_type_rows
+FROM `project-6b73a1f9-ef42-4074-81a.coldtrace_warehouse.telemetry_2022_2026`;
