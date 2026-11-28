@@ -1,3 +1,4 @@
+Markdown
 # ❄️ ColdTrace — AI Cold-Chain Operations & Spoilage Prevention Console
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)
@@ -7,33 +8,35 @@
 ![Cloud Run](https://img.shields.io/badge/Google%20Cloud-Run-4285F4?logo=googlecloud&logoColor=white)
 ![Terraform](https://img.shields.io/badge/IaC-Terraform-7B42BC?logo=terraform&logoColor=white)
 ![SDG 3](https://img.shields.io/badge/SDG-3%20Good%20Health%20%26%20Well--Being-4C9F38)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 **Know before the product spoils.**
 
-🔗 **Live demo:** <https://coldtrace-app-uxg3hjnrfa-uc.a.run.app/>  
-📄 **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)  
-📊 **Presentation Deck (11 slides):** [PROJECT_DOCS/ColdTrace_Cold-Chain_Operations.pdf](PROJECT_DOCS/ColdTrace_Cold-Chain_Operations.pdf)  
-🎥 **Recorded Walkthrough (3–5 min):** *Adding link before submission*
+- **Live Console:** <https://coldtrace-app-644777661209.us-central1.run.app>
+- **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)
+- **Presentation Deck (8 slides):** `PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx`
+- **Recorded Walkthrough (≤ 5 min):** *Add walkthrough link before final submission*
+- **License:** MIT License (see [18. License](#18-license))
 
-ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
+ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures, and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
 
 ---
 
 ## About ColdTrace
 
-Vaccines, medicines and perishable food lose value (and sometimes safety) the moment a cold room drifts out of its safe temperature band. In many distribution centers, problems such as a door left open, a failing compressor or a frozen sensor are noticed only after the inventory is already damaged, and fixed-threshold alarms fire so often that operators learn to ignore them.
+Vaccines, medicines, and perishable food lose value—and sometimes safety—the moment a cold room drifts out of its safe temperature band. In many distribution centers, problems such as a door left open, a failing compressor, or a frozen sensor are noticed only after inventory is already damaged, and fixed-threshold alarms fire so often that operators learn to ignore them.
 
 ColdTrace is a cold-chain operations console that closes that gap. It ingests sensor readings every 30 minutes, scores them with a Random Forest anomaly detector alongside an SOP threshold baseline, and raises debounced alerts that move through an `OPEN → ACKNOWLEDGED → CLOSED` lifecycle. Each alert is sealed with a SHA-256 evidence hash over the exact triggering readings, so the record is tamper-evident. Operators can optionally request an NVIDIA NIM incident note, which is always labeled **AI-GENERATED, REVIEW BEFORE ACTING** and never acts on a case by itself.
 
 **What it gives you**
 
-- Early detection of temperature excursions, cooling failures and sensor dropouts across multiple sites.
+- Early detection of temperature excursions, cooling failures, and sensor dropouts across multiple sites.
 - Fewer false alarms through causal rolling features and alert debouncing.
 - A calm, dark-mode control-room dashboard served directly by FastAPI.
 - Tamper-evident evidence trails for quality reviewers and compliance auditors.
-- A serverless, free-tier-first Google Cloud foundation, defined entirely in Terraform and deployed through keyless CI/CD.
+- A serverless, free-tier-first Google Cloud foundation, defined in Terraform and deployed through keyless CI/CD.
 
-**Built with:** Python 3.12, FastAPI, scikit-learn (Random Forest), NVIDIA NIM, Google Cloud Run, Firestore, BigQuery, Pub/Sub, Secret Manager, Terraform and GitHub Actions with Workload Identity Federation.
+**Built with:** Python 3.12, FastAPI, scikit-learn (Random Forest), NVIDIA NIM, Google Cloud Run, Firestore, BigQuery, Pub/Sub, Secret Manager, Terraform, and GitHub Actions with Workload Identity Federation.
 
 ---
 
@@ -57,6 +60,7 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 15. [Security Practices & Secret Handling](#15-security-practices--secret-handling)
 16. [Ownership Summary (RACI)](#16-ownership-summary-raci)
 17. [Implementation Plan, Risk Register & Roadmap](#17-implementation-plan-risk-register--roadmap)
+18. [License](#18-license)
 
 ---
 
@@ -64,24 +68,24 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 
 | | |
 |---|---|
-| **Target audience** | Cold-chain operations leads, quality reviewers and compliance auditors managing regional distribution centers: `JHB-DC01` (Johannesburg), `DBN-DC02` (Durban), `CPT-DC03` (Cape Town). |
-| **Problem** | Temperature excursions outside safe bands (such as above 8 °C or below 2 °C for temperature-sensitive pharmaceuticals/biologics, and above 2 °C for cold/perishable goods), compressor failures and frozen sensors are often discovered only after inventory is damaged, while high false-alarm rates cause alert fatigue. |
-| **SDG alignment** | **SDG 3 — Good Health and Well-Being.** Prevents spoilage of temperature-sensitive vaccines, medicines and perishable food by enabling human intervention within minutes. |
+| **Target audience** | Cold-chain operations leads, quality reviewers, and compliance auditors managing regional distribution centers: `JHB-DC01` (Johannesburg), `DBN-DC02` (Durban), `CPT-DC03` (Cape Town). |
+| **Problem** | Temperature excursions outside safe bands (such as above 8 °C or below 2 °C for temperature-sensitive pharmaceuticals/biologics, and above 2 °C for cold/perishable goods), compressor failures, and frozen sensors are often discovered only after inventory is damaged, while high false-alarm rates cause alert fatigue. |
+| **SDG alignment** | **SDG 3 — Good Health and Well-Being.** Prevents spoilage of temperature-sensitive vaccines, medicines, and perishable food by enabling human intervention within minutes. |
 
 ### 1.1 Cold-Chain Evidence & Operational Context
 
-* **Global vaccine cold-chain wastage (WHO / UNICEF):** World Health Organization and UNICEF cold-chain guidance highlights that temperature excursions and cold-chain breaks remain a major driver of vaccine wastage globally, especially where monitoring gaps or delayed responses prevent timely stock triage.
-* **Regional & perishable cold-chain losses (South Africa):** Distribution centers operating across warm transit corridors and multi-site storage (`JHB-DC01`, `DBN-DC02`, `CPT-DC03`) face compounding risks from ambient heat, power/compressor fluctuations, and high spoilage costs across temperature-sensitive pharmaceuticals, biologics, and chilled foods.
-* **Single-excursion cost impact:** Even a single unmitigated excursion can jeopardize high-value batches, trigger shipment holds or quarantine investigations, and require costly batch re-testing or disposal—making early detection during the drift window critical.
-* *(Note: Add exact report citations/URLs from WHO, UNICEF, and South African cold-chain studies in `PROJECT_DOCS/RESEARCH_SUMMARY.md` prior to final grading submission.)*
+- **Global vaccine cold-chain wastage (WHO / UNICEF):** World Health Organization and UNICEF cold-chain guidance highlights that temperature excursions and cold-chain breaks remain a major driver of vaccine wastage globally, especially where monitoring gaps or delayed responses prevent timely stock triage.
+- **Regional & perishable cold-chain losses (South Africa):** Distribution centers operating across warm transit corridors and multi-site storage (`JHB-DC01`, `DBN-DC02`, `CPT-DC03`) face compounding risks from ambient heat, power/compressor fluctuations, and high spoilage costs across temperature-sensitive pharmaceuticals, biologics, and chilled foods.
+- **Single-excursion cost impact:** Even a single unmitigated excursion can jeopardize high-value batches, trigger shipment holds or quarantine investigations, and require costly batch re-testing or disposal—making early detection during the drift window critical.
+- *(Detailed citations and evaluation findings are maintained in `PROJECT_DOCS/RESEARCH_SUMMARY.md`.)*
 
 ### 1.2 User Evidence & Pain-Point Friction Table
 
-Short operator check-ins and walkthrough notes with cold-store/distribution workflows surface three recurring operational bottlenecks:
+Operator walkthroughs across cold-store and distribution workflows highlight three recurring bottlenecks:
 
-* **Late discovery:** *"We find out at shift change—or when someone opens the door and sees the product already warmed up."*
-* **False-alarm fatigue:** *"When noisy threshold blips fire every hour, operators start muting or ignoring alerts until a real problem hits."*
-* **Audit trail gaps:** *"When QA asks what happened at 02:00 and who checked it, stitching together logs and notes takes hours."*
+- **Late discovery:** *"We find out at shift change—or when someone opens the door and sees the product already warmed up."*
+- **False-alarm fatigue:** *"When noisy threshold blips fire every hour, operators start muting or ignoring alerts until a real problem hits."*
+- **Audit trail gaps:** *"When QA asks what happened at 02:00 and who checked it, stitching together logs and notes takes hours."*
 
 | Friction Point | Operational Impact | ColdTrace Feature Addressing It |
 |---|---|---|
@@ -93,8 +97,8 @@ Short operator check-ins and walkthrough notes with cold-store/distribution work
 
 Because live production facility telemetry and confidential spoilage logs are not publicly exposed, ColdTrace uses a deterministic/configurable **synthetic sensor and cold-room simulator** (`cold_chain_labeled_2022_2026.csv` and generator scripts) to test edge cases safely:
 
-* **Realistic cold-room dynamics:** Models nominal temperatures, 30-minute sampling cadence, diurnal/ambient drift, and category-aware safe bands (`2°C–8°C` for pharma/biologics; `≤ 2°C` for cold/perishables).
-* **Fault & excursion scenarios:** Reproduces over-temperature excursions, near-freeze/freeze drops, compressor/cooling faults, and stuck/dropout sensor readings so evaluation tests both true excursions and non-excursion noise without risking real inventory.
+- **Realistic cold-room dynamics:** Models nominal temperatures, 30-minute sampling cadence, diurnal/ambient drift, and category-aware safe bands (`2°C–8°C` for pharma/biologics; `≤ 2°C` for cold/perishables).
+- **Fault & excursion scenarios:** Reproduces over-temperature excursions, near-freeze/freeze drops, compressor/cooling faults, and stuck/dropout sensor readings so evaluation tests both true excursions and non-excursion noise without risking real inventory.
 
 ---
 
@@ -116,11 +120,8 @@ flowchart LR
     G --> H[Operations Console<br/>frontend/index.html]
     G -->|POST /alerts/id/explain| I[nim.py<br/>NVIDIA NIM]
     I -->|AI-GENERATED note<br/>review before acting| H
-```
-
-### 2.2 Cloud platform architecture
-
-```mermaid
+2.2 Cloud platform architecture
+Code snippet
 flowchart TB
     subgraph DEV[Delivery pipeline]
         GH[GitHub repository] -->|push / PR| GHA[GitHub Actions<br/>ci-deploy.yml]
@@ -148,34 +149,28 @@ flowchart TB
     ANALYST[Data analyst<br/>bq load batch jobs] --> BQ
     OPS[Operations console users] --> CR
     SEC[Security reviewer<br/>read-only audit] -.-> LOG
-```
-
-### 2.3 Component responsibilities
-
-| Component | Purpose |
-|---|---|
-| **FastAPI (`api.py`)** | Serves the dashboard, authenticates requests, exposes ingest/alert/explain endpoints. |
-| **Feature engine (`features.py`)** | Causal 24-hour rolling features; no look-ahead leakage. |
-| **Detector (`model.py`, `rules.py`)** | Random Forest classifier plus SOP fixed-threshold baseline for comparison. |
-| **Service layer (`service.py`)** | Streaming state, debouncing, alert lifecycle and SHA-256 evidence sealing. |
-| **NIM client (`nim.py`)** | Generates strict-JSON, schema-validated incident notes via NVIDIA NIM. |
-| **Cloud Run** | Single scale-to-zero container serving API and web UI. |
-| **Pub/Sub + Cloud Scheduler** | Serverless scheduled and asynchronous pipelines. |
-| **Firestore** | Persistent alert and case state (replaces in-memory state for multi-instance use). |
-| **BigQuery (`coldtrace_warehouse`)** | Telemetry and anomaly history for analysis and trend validation. |
-| **Secret Manager** | Holds `INGEST_API_KEY` and `NVIDIA_API_KEY`; injected at runtime. |
-| **Artifact Registry** | Stores container images built by CI/CD. |
-| **Terraform** | Declares all infrastructure, IAM bindings, budgets and guardrails. |
-| **GitHub Actions + WIF** | Keyless build, push and deploy through a single `ci-deploy.yml` workflow. |
-
----
-
-## 3. Repository Structure
-
-```text
+2.3 Component responsibilities
+Component	Purpose
+FastAPI (api.py)	Serves the dashboard, authenticates requests, exposes ingest/alert/explain endpoints.
+Feature engine (features.py)	Causal 24-hour rolling features; no look-ahead leakage.
+Detector (model.py, rules.py)	Random Forest classifier plus SOP fixed-threshold baseline for comparison.
+Service layer (service.py)	Streaming state, debouncing, alert lifecycle, and SHA-256 evidence sealing.
+NIM client (nim.py)	Generates strict-JSON, schema-validated incident notes via NVIDIA NIM.
+Cloud Run	Scale-to-zero container serving API and web UI.
+Pub/Sub + Cloud Scheduler	Serverless scheduled and asynchronous pipelines.
+Firestore	Persistent alert and case state (USE_FIRESTORE).
+BigQuery (coldtrace_warehouse)	Partitioned telemetry and anomaly history (coldtrace_warehouse.telemetry_2022_2026).
+Secret Manager	Holds INGEST_API_KEY and NVIDIA_API_KEY; injected at runtime.
+Artifact Registry	Stores container images built by CI/CD.
+Terraform	Declares infrastructure, IAM bindings, budgets, and guardrails.
+GitHub Actions + WIF	Keyless build, push, and deploy via .github/workflows/ci-deploy.yml.
+3. Repository Structure
+Plaintext
 coldtrace/
-├── README.md               # Project overview, team & setup guide
+├── README.md               # Project overview, team, setup & submission links
+├── LICENSE                 # MIT License
 ├── env.example             # Sample environment variables (never commit .env)
+├── PROJECT_DOCS/           # Research summary & 8-slide presentation deck
 ├── terraform/              # Infrastructure as Code (project, IAM, WIF, budget, services)
 ├── .github/
 │   └── workflows/
@@ -190,163 +185,96 @@ coldtrace/
     │   ├── nim.py          # NVIDIA NIM client with strict JSON schema validation
     │   └── evaluate.py     # Event-level recall, TTD & false-alert metrics
     ├── frontend/
-    │   └── index.html      # Dark-mode operations console (#0B1220 / #38BDF8 design system)
+    │   ├── index.html      # Operations console UI
+    │   └── app.js          # Console state, replay, triage & filtering logic
     ├── data/
-    │   └── sample_14d.csv  # 14-day synthetic telemetry for local & cloud demo replay
-    ├── artifacts/          # Trained Random Forest model artifacts
-    ├── scripts/
-    │   ├── generate_data.py # Synthetic multi-site telemetry generator (2022–2026)
-    │   ├── train_eval.py    # Trains & benchmarks threshold vs. rules vs. Random Forest
-    │   ├── replay.py        # Replays CSV telemetry locally or against live HTTP API
-    │   └── compare_nim.py   # Benchmarks NVIDIA NIM models on labeled windows
+    │   └── cold_chain_labeled_2022_2026.csv # Primary 2022–2026 telemetry dataset (254,160 rows)
+    ├── artifacts/          # Trained Random Forest model & evaluation artifacts
+    ├── scripts/            # Data generation, training/eval, replay & NIM benchmark scripts
     ├── tests/              # Automated unit tests (pytest)
     ├── Dockerfile          # Production container for Google Cloud Run
     └── requirements.txt    # Python 3.12 dependencies
-```
+4. Detection Model & Exception Types
+Exception type	Sensor signature	Operational action
+TEMP_EXCURSION	Temperature leaves the safe band (door left open / power loss); cooling load rises.	Inspect unit immediately; relocate or protect at-risk batches.
+COOLING_FAILURE	Temperature drifts upward while cooling load is abnormally low (compressor fault).	Dispatch maintenance; transfer high-sensitivity inventory.
+SENSOR_DROPOUT	Sensor connectivity drops and temperature/humidity readings freeze.	Verify temperature manually; treat unit status as unknown.
+Benchmark results
+Metric	Result
+Random Forest event recall	94%
+Median excursion time-to-detect (TTD)	0.5 h
+Cooling failure TTD	1.0 h
+False alerts	~0.11 per location-day
+Note: These metrics are derived from simulated data to validate pipeline performance. In the 
+𝑛
+=
+120
+n=120 test-window benchmark (30 per class), Random Forest achieved 0.918 macro-F1 vs. 0.626 for rules, supporting NIM as the human-reviewed incident-explanation layer rather than the primary anomaly detector.
 
----
+5. Team, Roles & Responsibilities
+Member	Role	Primary focus
+Moorthy R	DevOps & Cloud Owner	GCP project, billing, Terraform, CI/CD, secrets, reliability
+Chantell Ntokozo	Data Analyst	BigQuery data loading, partition-aware querying, telemetry validation
+Mbambala T	AI & Cloud Foundation Engineer	AI/ML pipeline, container builds, Cloud Run, Pub/Sub, Scheduler, Firestore
+Peter Opiyo	Cyber Security Reviewer	Read-only audit of IAM, WIF, logs, monitoring and evidence integrity
+5.1 DevOps & Cloud Owner — Moorthy R
+GitHub: @MOORTHYrm
 
-## 4. Detection Model & Exception Types
+Project Owner and Billing Account Administrator.
 
-| Exception type | Sensor signature | Operational action |
-|---|---|---|
-| `TEMP_EXCURSION` | Temperature leaves the 2–8 °C safe band (door left open / power loss); cooling load rises. | Inspect unit immediately; relocate or protect at-risk batches. |
-| `COOLING_FAILURE` | Temperature drifts upward while cooling load is abnormally low (compressor fault). | Dispatch maintenance; transfer high-sensitivity inventory. |
-| `SENSOR_DROPOUT` | Sensor connectivity drops and temperature/humidity readings freeze. | Verify temperature manually; treat unit status as unknown. |
+Owns the GCP project, billing account, budget guardrails, Terraform IaC, keyless GitHub Actions CI/CD (ci-deploy.yml with WIF), Secret Manager rotation, and production reliability.
 
-### Benchmark results
+Delivers local/WSL environment setup, API workflow endpoints, full-stack console integration, and Cloud Run deployments.
 
-| Metric | Result |
-|---|---|
-| Random Forest event recall | **94%** |
-| Median excursion time-to-detect (TTD) | **0.5 h** |
-| Cooling failure TTD | **1.0 h** |
-| False alerts | **~0.11 per location-day** |
+5.2 Data Analyst — Chantell Ntokozo
+GitHub: @ntokozochantell396-lab
 
-> **Note:** These metrics are derived from simulated data to validate pipeline performance. In the $n = 120$ test-window benchmark (`30` per class), Random Forest achieved **0.918 macro-F1** vs. **0.626** for rules, supporting NIM as the human-reviewed incident-explanation layer rather than the primary anomaly detector.
+Holds roles/bigquery.jobUser (project-level) and roles/bigquery.dataEditor (scoped to coldtrace_warehouse).
 
----
+Loads telemetry via free batch bq load jobs, enforces Timestamp partition filters, and validates 30-minute cadence, schema conformity, and flat-run sensor dropouts.
 
-## 5. Team, Roles & Responsibilities
+5.3 AI & Cloud Foundation Engineer — Mbambala T
+GitHub: @Muedi-M
 
-| Member | Role | Primary focus |
-|---|---|---|
-| **Moorthy R** | DevOps & Cloud Owner | GCP project, billing, Terraform, CI/CD, secrets, reliability |
-| **Chantell Ntokozo** | Data Analyst | BigQuery data loading, partition-aware querying, telemetry validation |
-| **Mbambala T** | AI & Cloud Foundation Engineer | AI/ML pipeline, container builds, Cloud Run, Pub/Sub, Scheduler, Firestore |
-| **Peter Opiyo** | Cyber Security Reviewer | Read-only audit of IAM, WIF, logs, monitoring and evidence integrity |
+Holds project-level run.developer, artifactregistry.writer, pubsub.editor, cloudscheduler.admin, datastore.user, bigquery.jobUser, bigquery.dataViewer, secretmanager.viewer (metadata only), and iam.serviceAccountUser.
 
-### 5.1 DevOps & Cloud Owner — Moorthy R
+Builds and deploys Cloud Run revisions, maintains serverless Pub/Sub/Scheduler/Firestore/BigQuery pipelines, preserves scale-to-zero guardrails, and delivers ML/NIM integration.
 
-**GitHub:** `@MOORTHYrm`
+5.4 Cyber Security Reviewer — Peter Opiyo
+GitHub: @PeterOpiyo240
 
-**Roles**
-- Project Owner
-- Billing Account Administrator
+Holds read-only roles (iam.securityReviewer, logging.viewer, logging.privateLogViewer, monitoring.viewer, secretmanager.viewer, bigquery.dataViewer, bigquery.jobUser).
 
-**Responsibilities**
-- Owns the GCP project, the billing account and the **`$1/month` budget guardrail**.
-- Manages **Terraform** infrastructure as code.
-- Manages the **GitHub Actions CI/CD** pipeline (`ci-deploy.yml`) with **Workload Identity Federation** (keyless authentication).
-- Manages **Secret Manager** secret creation and rotation.
-- Oversees cost and quota limits and overall **production reliability**.
-- Delivers the local/WSL environment setup, API workflow endpoints, full-stack console integration and Cloud Run deployment.
+Audits IAM bindings, WIF trust rules, authentication rejections, Cloud Audit Logs, Cloud Monitoring alerts, and evidence_sha256 integrity without write access or raw secret values.
 
-### 5.2 Data Analyst — Chantell Ntokozo
+6. IAM Access Matrix & Service Accounts
+6.1 Human access matrix
+Role	Moorthy R	Chantell N.	Mbambala T	Peter O.
+Project Owner	✅			
+Billing Account Administrator	✅			
+bigquery.jobUser		✅	✅	✅
+bigquery.dataEditor (coldtrace_warehouse only)		✅		
+bigquery.dataViewer			✅	✅
+run.developer			✅	
+artifactregistry.writer			✅	
+pubsub.editor			✅	
+cloudscheduler.admin			✅	
+datastore.user			✅	
+iam.serviceAccountUser			✅	
+secretmanager.viewer (metadata only)			✅	✅
+iam.securityReviewer				✅
+logging.viewer / logging.privateLogViewer				✅
+monitoring.viewer				✅
+6.2 Service accounts
+Service account	Used by	Permissions (least privilege)
+coldtrace-runtime-sa	Cloud Run service	Firestore, Pub/Sub, BigQuery (read/query), Cloud Logging & Monitoring, and only the required Secret Manager secrets.
+coldtrace-cicd-sa	GitHub Actions	Authenticates keylessly via Workload Identity Federation; pushes images to Artifact Registry and deploys Cloud Run revisions. No long-lived keys.
+7. CI/CD & Infrastructure as Code
+Owner: Moorthy R (with Mbambala T for build and deploy specifics)
 
-**GitHub:** `@ntokozochantell396-lab`
+The pipeline lives in .github/workflows/ci-deploy.yml:
 
-**Roles**
-- `roles/bigquery.jobUser` (project-level)
-- `roles/bigquery.dataEditor` (scoped to the `coldtrace_warehouse` dataset only)
-
-**Responsibilities**
-- Feeds cold-chain telemetry into `coldtrace_warehouse` using **free batch load jobs (`bq load`)** instead of paid streaming inserts.
-- Queries data using **partition filters on `Timestamp`**, staying within query byte and daily limits.
-- Validates telemetry quality and anomaly trends through BigQuery and the ColdTrace read endpoints.
-- Delivers data schema validation, 30-minute cadence checks and flat-run (sensor dropout) verification.
-
-### 5.3 AI & Cloud Foundation Engineer — Mbambala T
-
-**GitHub:** `@Muedi-M`
-
-**Roles (project-level)**
-- `roles/run.developer`
-- `roles/artifactregistry.writer`
-- `roles/pubsub.editor`
-- `roles/cloudscheduler.admin`
-- `roles/datastore.user`
-- `roles/bigquery.jobUser`
-- `roles/bigquery.dataViewer`
-- `roles/secretmanager.viewer`
-- `roles/iam.serviceAccountUser`
-
-**Responsibilities**
-- Builds and deploys ColdTrace container images to **Artifact Registry** and **Cloud Run**.
-- Maintains serverless pipelines across **Pub/Sub, Cloud Scheduler, Firestore, BigQuery** and AI inference endpoints.
-- Keeps **free-tier scaling guardrails** intact (scale-to-zero, instance caps, memory limits).
-- Works **without access to plaintext secrets** (`secretmanager.viewer` allows metadata only).
-- Delivers the AI research foundations, synthetic dataset simulator, Random Forest baseline and evaluation, NVIDIA NIM integration and frontend build brief.
-
-### 5.4 Cyber Security Reviewer — Peter Opiyo
-
-**GitHub:** `@PeterOpiyo240`
-
-**Roles (project-level, read-only)**
-- `roles/iam.securityReviewer`
-- `roles/logging.viewer`
-- `roles/logging.privateLogViewer`
-- `roles/monitoring.viewer`
-- `roles/secretmanager.viewer`
-- `roles/bigquery.dataViewer`
-- `roles/bigquery.jobUser`
-
-**Responsibilities**
-- Audits **IAM bindings**, **WIF trust rules**, authentication/authorization rejections and **Cloud Audit Logs**.
-- Reviews **Cloud Monitoring** alerts and **evidence integrity** (`evidence_sha256`).
-- Operates in a **read-only audit capacity**: no write permissions and no access to raw secret values.
-- Delivers API key security (`X-API-Key` constant-time verification), secret management practices and role-based access review.
-
----
-
-## 6. IAM Access Matrix & Service Accounts
-
-### 6.1 Human access matrix
-
-| Role | Moorthy R | Chantell N. | Mbambala T | Peter O. |
-|---|:---:|:---:|:---:|:---:|
-| Project Owner | ✅ | | | |
-| Billing Account Administrator | ✅ | | | |
-| `bigquery.jobUser` | | ✅ | ✅ | ✅ |
-| `bigquery.dataEditor` (`coldtrace_warehouse` only) | | ✅ | | |
-| `bigquery.dataViewer` | | | ✅ | ✅ |
-| `run.developer` | | | ✅ | |
-| `artifactregistry.writer` | | | ✅ | |
-| `pubsub.editor` | | | ✅ | |
-| `cloudscheduler.admin` | | | ✅ | |
-| `datastore.user` | | | ✅ | |
-| `iam.serviceAccountUser` | | | ✅ | |
-| `secretmanager.viewer` (metadata only) | | | ✅ | ✅ |
-| `iam.securityReviewer` | | | | ✅ |
-| `logging.viewer` / `logging.privateLogViewer` | | | | ✅ |
-| `monitoring.viewer` | | | | ✅ |
-
-### 6.2 Service accounts
-
-| Service account | Used by | Permissions (least privilege) |
-|---|---|---|
-| `coldtrace-runtime-sa` | Cloud Run service | Firestore, Pub/Sub, BigQuery (read/query), Cloud Logging & Monitoring, and **only the required Secret Manager secrets**. |
-| `coldtrace-cicd-sa` | GitHub Actions | Authenticates **keylessly via Workload Identity Federation**; pushes images to Artifact Registry and deploys Cloud Run revisions. No long-lived keys. |
-
----
-
-## 7. CI/CD & Infrastructure as Code
-
-**Owner:** Moorthy R (with Mbambala T for build and deploy specifics)
-
-The whole pipeline lives in **one workflow file: `.github/workflows/ci-deploy.yml`**.
-
-```text
+Plaintext
 git push ──► GitHub Actions (ci-deploy.yml) ──► OIDC token ──► Workload Identity Federation
                                                                       │
                                                          impersonate coldtrace-cicd-sa
@@ -355,388 +283,191 @@ git push ──► GitHub Actions (ci-deploy.yml) ──► OIDC token ──►
                                         ▼                                             ▼
                               Build & push image                          Deploy Cloud Run revision
                               to Artifact Registry                        (runs as coldtrace-runtime-sa)
-```
+No service-account JSON keys exist in the repository or CI; GitHub authenticates via short-lived OIDC tokens.
 
-- **No service-account JSON keys** exist anywhere; GitHub authenticates through short-lived OIDC tokens.
-- WIF trust rules are scoped to this repository so other repos cannot impersonate the CI/CD identity.
-- **Terraform** is the single source of truth for APIs, service accounts, IAM bindings, WIF, budget alerts and Cloud Run guardrails.
-- Secrets are rotated in **Secret Manager**; Cloud Run reads the latest version at runtime.
-- Peter Opiyo periodically reviews the Terraform-declared IAM and WIF rules against the live project state.
+WIF trust rules are scoped to this repository (assertion.repository == 'Muedi-M/ColdTrace') and reviewed by Peter Opiyo.
 
-### 7.1 Pipeline stages
+Terraform declares APIs, service accounts, IAM bindings, WIF, budget alerts, and Cloud Run guardrails.
 
-`ci-deploy.yml` runs on every push and pull request. The `test-and-validate` job always runs; the `deploy` job runs only on `main` and only after `test-and-validate` passes.
-
-```mermaid
+7.1 Pipeline stages
+Code snippet
 flowchart LR
     PR[Pull request or push] --> T[test-and-validate<br/>pytest + terraform fmt/validate]
     T --> G{Tests green?}
     G -->|pull request| M[Eligible to merge]
     G -->|push to main| DEP[deploy<br/>WIF to Artifact Registry to Cloud Run]
-```
+7.2 Workflow: ci-deploy.yml
+Job	Triggers	What it does	Blocks merge?	Owner
+test-and-validate	push to main, pull request, manual	Installs dependencies, runs pytest, then Terraform fmt and validate	Yes	Moorthy R
+deploy	push to main (after test-and-validate passes), manual	Authenticates through WIF, builds and pushes the image to Artifact Registry, deploys a new Cloud Run revision	n/a (runs after merge)	Moorthy R / Mbambala T
+7.3 GitHub secrets & branch protection
+Configure in repository Settings → Secrets and variables → Actions:
 
-### 7.2 Workflow: `ci-deploy.yml`
+GCP_PROJECT_ID
 
-| Job | Triggers | What it does | Blocks merge? | Owner |
-|---|---|---|---|---|
-| `test-and-validate` | push to `main`, pull request, manual | Installs dependencies, runs `pytest`, then Terraform `fmt` and `validate` | Yes | Moorthy R |
-| `deploy` | push to `main` (after `test-and-validate` passes), manual | Authenticates through WIF, builds and pushes the image to Artifact Registry, deploys a new Cloud Run revision | n/a (runs after merge) | Moorthy R / Mbambala T |
+GCP_WIF_PROVIDER
 
-### 7.3 GitHub secrets used by the pipeline
+GCP_CICD_SA
 
-| Secret (Settings → Secrets and variables → Actions) | Used by | Notes |
-|---|---|---|
-| `GCP_PROJECT_ID` | deploy job | Project identifier; not a credential, but kept as a secret to avoid exposing infrastructure details. |
-| `GCP_WIF_PROVIDER` | deploy job | Full Workload Identity Provider resource name. |
-| `GCP_CICD_SA` | deploy job | Email of `coldtrace-cicd-sa`. |
+Production runtime keys (INGEST_API_KEY, NVIDIA_API_KEY) live in Secret Manager and are injected at runtime. Enable branch protection on main requiring pull requests and the test-and-validate check to pass, and disallowing force pushes/deletions.
 
-- There is **no service-account JSON key** in GitHub or anywhere else. Authentication is a short-lived OIDC token exchanged through WIF.
-- `INGEST_API_KEY` and `NVIDIA_API_KEY` for production live in **Secret Manager**, never in GitHub.
-- The values `change-me-local-only` and `dummy-key-for-tests` that appear in the workflow and tests are dummy placeholders with no access to anything.
-- The workflow uses minimal permissions: `contents: read` by default, with `id-token: write` granted only to the deploy job so it can request the OIDC token.
+8. Cost, Quota & Free-Tier Guardrails
+Guardrail	Setting	Owner
+Monthly budget	Budget cap & alert thresholds	Moorthy R
+Cloud Run idle cost	--min-instances 0 (scale-to-zero)	Moorthy R / Mbambala T
+Cloud Run scaling & concurrency	Bounded instances/concurrency & memory limits	Moorthy R / Mbambala T
+BigQuery loading	Free batch bq load only; no streaming inserts	Chantell Ntokozo
+BigQuery querying	Partition filter on Timestamp; byte and daily query limits	Chantell Ntokozo
+Secrets	Secret Manager only; no plaintext access for engineers	Moorthy R / Peter Opiyo
+Cost & quota review	Ongoing monitoring of usage and quotas	Moorthy R
+9. Data Warehouse Conventions
+Dataset: coldtrace_warehouse (BigQuery)
 
-### 7.4 Branch protection (Settings → Branches → rule for `main`)
+Load method: Use free batch load jobs (bq load) rather than streaming inserts.
 
-Enable:
-- Require a pull request before merging.
-- Require the status check `test-and-validate` to pass.
-- Require branches to be up to date before merging.
-- Block force pushes and deletions.
+Partitioning: Tables are partitioned on Timestamp; queries filter on Timestamp to control scan volume.
 
-Owner: Moorthy R. Reviewer: Peter Opiyo.
+SQL
+SELECT Storage_Location_ID, AVG(Warehouse_Temperature_C) AS avg_temp
+FROM `coldtrace_warehouse.telemetry_2022_2026`
+WHERE Timestamp BETWEEN TIMESTAMP('2026-11-01') AND TIMESTAMP('2026-11-14')
+GROUP BY Storage_Location_ID;
+Access: Only the Data Analyst holds dataset-scoped write access (dataEditor); other roles and Cloud Run runtime operate read-only.
 
-### 7.5 Lock down the Workload Identity trust rule
+Dataset & Validation Summary:
 
-Restrict the provider so only this repository (and optionally only `main`) can impersonate `coldtrace-cicd-sa`. In Terraform (illustrative, adapt to the real resource names):
+Primary historical dataset: cold_chain_labeled_2022_2026.csv (coldtrace_warehouse.telemetry_2022_2026 — 254,160 records at 30-minute intervals across JHB-DC01, DBN-DC02, and CPT-DC03, 100% synthetic).
 
-```hcl
-resource "google_iam_workload_identity_pool_provider" "github" {
-  # ...existing arguments...
-  attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.repository" = "assertion.repository"
-    "attribute.ref"        = "assertion.ref"
-  }
-  attribute_condition = "assertion.repository == 'Muedi-M/ColdTrace'"
-}
-```
+Validation checks: Verified required columns, timestamp continuity, non-null critical fields, and labeled exception distributions (NONE, SENSOR_DROPOUT, COOLING_FAILURE, TEMP_EXCURSION), plus reconciliation between operational state and warehouse tables.
 
-Peter Opiyo reviews this condition as part of the WIF audit.
+Known limitations: Synthetic telemetry and fault injection represent simulated cold rooms rather than uncalibrated physical IoT probes; warehouse columns (Warehouse_Temperature_C, Warehouse_Humidity_Percent, Cooling_Load_Percent, Sensor_Connectivity, Exception_Type, Storage_Location_ID, Timestamp) are enforced in SQL validation.
 
----
+10. Environment Configuration & Secrets
+Secrets are injected via environment variables (locally via Backend/.env, in production via Secret Manager bound to Cloud Run) and are never committed to source control.
 
-## 8. Cost, Quota & Free-Tier Guardrails
+Variable	Required	Description
+INGEST_API_KEY	✅ Yes	Shared API key required in the X-API-Key header for /ingest, /alerts/{id}/explain, and case mutation routes.
+NVIDIA_API_KEY	✅ Yes	NVIDIA NGC API key used by coldtrace/nim.py to generate grounded incident notes.
+NIM_MODEL	Optional	NVIDIA NIM model ID (defaults to nim.DEFAULT_MODELS[0]).
+NIM_TIMEOUT	Optional	Request timeout in seconds for NVIDIA NIM calls (default: 120).
+MODEL_PATH	Optional	Path to the trained Random Forest .joblib artifact.
+11. Local Setup & Running Instructions
+Prerequisites
+Python 3.12+ (WSL Ubuntu 24.04, Linux, or macOS)
 
-| Guardrail | Setting | Owner |
-|---|---|---|
-| Monthly budget | `$1/month` with alert thresholds | Moorthy R |
-| Cloud Run idle cost | `--min-instances 0` (scale-to-zero) | Mbambala T |
-| Cloud Run cap | `--max-instances 1`, `--memory 512Mi` | Mbambala T |
-| BigQuery loading | Free batch `bq load` only; **no streaming inserts** | Chantell Ntokozo |
-| BigQuery querying | Partition filter on `Timestamp`; byte and daily query limits | Chantell Ntokozo |
-| Secrets | Secret Manager only; no plaintext access for engineers | Moorthy R / Peter Opiyo |
-| Cost & quota review | Ongoing monitoring of usage and quotas | Moorthy R |
+Step-by-step local launch
+Create and activate a virtual environment
 
----
-
-## 9. Data Warehouse Conventions
-
-Dataset: **`coldtrace_warehouse`** (BigQuery)
-
-1. **Load method:** use batch load jobs.
-   ```bash
-   bq load --source_format=CSV --skip_leading_rows=1 \
-     coldtrace_warehouse.telemetry ./data/sample_14d.csv
-   ```
-2. **Partitioning:** tables are partitioned on `Timestamp`; every query must filter on it.
-   ```sql
-   SELECT location_id, AVG(temperature_c) AS avg_temp
-   FROM `coldtrace_warehouse.telemetry`
-   WHERE Timestamp BETWEEN TIMESTAMP('2026-11-01') AND TIMESTAMP('2026-11-14')
-   GROUP BY location_id;
-   ```
-3. **Access:** only the Data Analyst has write access (`dataEditor`, dataset-scoped). Everyone else is read-only; the Cloud Run runtime reads and queries only.
-4. **Validation:** confirm 30-minute cadence, schema conformity and flat-run sensor dropouts before data is trusted for trend analysis.
-   5. **Data Sources (Synthetic Telemetry):**
-   - **Primary historical benchmark dataset:** `cold_chain_labeled_2022_2026.csv` (`coldtrace_warehouse.telemetry_2022_2026` — 254,160 total records at 30-minute intervals, 84,720 rows each across simulated storage units `JHB-DC01`, `DBN-DC02`, and `CPT-DC03`).
-   - **Validation sample dataset:** `sample_14d.csv` (14-day telemetry slice at 30-minute intervals, 2,016 total records) evaluated against the Pharmaceutical cold-chain safe band (`2°C–8°C`).
-   - All sensor streams, batch records, and facility identifiers are 100% synthetic and contain no real patient, clinical, or proprietary warehouse data.
-
-6. **Validation Checks & Audit Summary:**
-   - **Schema & Completeness:** Verified required columns, timestamp continuity, and non-null keys across both `sample_14d` (2,016 rows, 0 quarantined rows) and `telemetry_2022_2026` (254,160 rows, 0 null critical fields, 0 quarantined/out-of-range rows, and 0 null `Exception_Type` values).
-   - **Threshold & Anomaly Rules (`2°C–8°C` Safe Band):**
-     - `sample_14d`: Flagged 188 exception alerts and 48.0 total dropout hours.
-     - `telemetry_2022_2026`: Flagged 1,468 safe-band excursions (0.58% — `DBN-DC02`: 755, `JHB-DC01`: 367, `CPT-DC03`: 346) alongside labeled exceptions (`NONE`: 236,696 [93.13%], `SENSOR_DROPOUT`: 9,943 [3.91%], `COOLING_FAILURE`: 4,262 [1.68%], `TEMP_EXCURSION`: 3,259 [1.28%]).
-   - **Cross-Store Reconciliation:** Verified row-count parity between operational Firestore collections and `coldtrace_warehouse` BigQuery tables during CSV feed replay.
-
-7. **Known Gaps & Limitations:**
-   - **Simulated Telemetry:** Data reflects synthetic fault injection (`TEMP_EXCURSION`, `COOLING_FAILURE`, `SENSOR_DROPOUT`) rather than live physical IoT sensor hardware; real-world deployment requires sensor calibration and drift monitoring.
-   - **Verified Warehouse Schema:** Documentation examples may reference shorthand names (`temperature_c`, `location_id`), whereas the deployed BigQuery warehouse (`coldtrace_warehouse.telemetry_2022_2026`) uses `Warehouse_Temperature_C`, `Warehouse_Humidity_Percent`, `Cooling_Load_Percent`, `Sensor_Connectivity`, `Exception_Type`, `Storage_Location_ID`, and `Timestamp` (enforced in `Validation_coldtrace.sql`).
----
-
-## 10. Environment Configuration & Secrets
-
-Secrets are injected via environment variables (locally via `Backend/.env`, in production via **Secret Manager** bound to Cloud Run) and are **never committed** to source control.
-
-| Variable | Required | Description |
-|---|---|---|
-| `INGEST_API_KEY` | ✅ Yes | Shared API key required in the `X-API-Key` header for `/ingest`, `/alerts/{id}/explain` and case mutation routes. |
-| `NVIDIA_API_KEY` | ✅ Yes | NVIDIA NGC API key used by `coldtrace/nim.py` to generate grounded incident notes. |
-| `NIM_MODEL` | Optional | NVIDIA NIM model ID (defaults to `nim.DEFAULT_MODELS[0]`). |
-| `NIM_TIMEOUT` | Optional | Request timeout in seconds for NVIDIA NIM calls (default: `120`). |
-| `MODEL_PATH` | Optional | Path to the trained Random Forest `.joblib` artifact. |
-
----
-
-## 11. Local Setup & Running Instructions
-
-### Prerequisites
-
-- Python 3.12+ (WSL Ubuntu 24.04, Linux or macOS)
-
-### Step-by-step local launch
-
-**1. Create and activate the virtual environment**
-
-```bash
+Bash
 cd Backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
+Configure environment variables
 
-**2. Configure environment variables**
-
-```bash
+Bash
 cp ../env.example .env
-# Edit .env and set your INGEST_API_KEY and NVIDIA_API_KEY
+# Set INGEST_API_KEY and NVIDIA_API_KEY in .env
 export $(grep -v '^#' .env | xargs)
-```
+Start the full-stack server (API + web dashboard)
 
-**3. Start the full-stack server (API + web dashboard)**
-
-```bash
+Bash
 uvicorn coldtrace.api:app --reload --port 8000
-```
+Operations Console UI: http://localhost:8000
 
-**4. Open the application**
+Interactive API docs (Swagger): http://localhost:8000/docs
 
-| What | URL |
-|---|---|
-| Operations Console UI | <http://localhost:8000> |
-| Interactive API docs (Swagger) | <http://localhost:8000/docs> |
+Run unit tests
 
-In the console, click **Simulate 14d Feed** to replay `sample_14d.csv`, inspect alerts, acknowledge or close cases, and click **Generate AI Note**.
-
-**5. Run the unit tests**
-
-```bash
+Bash
 pytest -q tests
-```
+12. Google Cloud Run Deployment
+The container packages the FastAPI backend and frontend console together and runs on Cloud Run with scale-to-zero (--min-instances 0) when idle. Production deployments run automatically via .github/workflows/ci-deploy.yml; manual deployment for bootstrap/troubleshooting:
 
----
-
-## 12. Google Cloud Run Deployment
-
-The included `Backend/Dockerfile` packages both the FastAPI backend and the `frontend/index.html` dashboard into a single container that runs within Cloud Run's Always Free tier (scale-to-zero when idle). Production deployments are normally performed by **GitHub Actions** through `ci-deploy.yml` (see [section 7](#7-cicd--infrastructure-as-code)); the manual path below is for bootstrap and troubleshooting.
-
-**1. Authenticate and enable the required GCP APIs**
-
-```bash
-gcloud init
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
-```
-
-**2. Make sure the Dockerfile copies the frontend**
-
-Verify that `COPY frontend ./frontend` (or `COPY . .`) is present in `Backend/Dockerfile`.
-
-**3. Deploy to Cloud Run** (`--min-instances 0` for $0 idle cost)
-
-```bash
+Bash
 cd Backend
 gcloud run deploy coldtrace-app \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
   --min-instances 0 \
-  --max-instances 1 \
+  --max-instances 3 \
+  --concurrency 10 \
   --memory 512Mi \
   --service-account coldtrace-runtime-sa@<PROJECT_ID>.iam.gserviceaccount.com \
   --set-secrets "INGEST_API_KEY=INGEST_API_KEY:latest,NVIDIA_API_KEY=NVIDIA_API_KEY:latest"
-```
+13. API Reference
+Method & path	Auth (X-API-Key)	Purpose
+GET /	Public	Serves the ColdTrace Operations Console web UI.
+GET /healthz	Public	Health check and active storage / Pub/Sub status.
+POST /ingest	Required	Ingests a 30-min sensor reading, updates 24h causal rolling features, and raises alerts.
+POST /alerts/{id}/explain	Required	Calls NVIDIA NIM to produce a schema-validated explanation (AI-GENERATED, REVIEW BEFORE ACTING) grounded in evidence_sha256.
+GET /api/locations	Optional	Returns current status and latest telemetry for JHB-DC01, DBN-DC02, and CPT-DC03.
+GET /api/alerts	Optional	Lists detected alerts with evidence_sha256 and lifecycle state (OPEN, ACKNOWLEDGED, CLOSED).
+POST /api/alerts/{id}/ack	Required	Transitions an alert from OPEN to ACKNOWLEDGED.
+POST /api/alerts/{id}/close	Required	Transitions an alert to CLOSED.
+POST /api/demo/replay	Required	Replays cold_chain_labeled_2022_2026.csv into the streaming detector and refreshes UI state.
+14. Security & Design Guardrails
+AI safety: Primary anomaly detection never depends on the LLM. Every NVIDIA NIM note is labeled AI-GENERATED, REVIEW BEFORE ACTING and never auto-acknowledges or auto-closes alerts.
 
-> 💡 Secrets are stored in **Secret Manager** and bound with `--set-secrets`. Avoid `--set-env-vars` for keys, since plaintext values appear in service configuration.
+Tamper-evident evidence: Each alert computes a deterministic evidence_sha256 hash over triggering sensor records.
 
-**4. Verify the cloud deployment**
+Authentication & secrets: Constant-time X-API-Key verification; secrets stored in Secret Manager and injected at runtime (secretmanager.viewer metadata-only for engineers/auditors).
 
-Open the generated `https://coldtrace-app-xxxxx-uc.a.run.app` HTTPS URL, enter your `INGEST_API_KEY` in the header bar, and click **Simulate 14d Feed**.
+Keyless CI/CD & least privilege: GitHub Actions uses OIDC + Workload Identity Federation with no JSON keys; IAM is least-privilege with read-only security auditing.
 
----
+Persistence: Firestore (USE_FIRESTORE) persists alert state across instances/restarts when configured, with clean fallback/diagnostics reported in /healthz.
 
-## 13. API Reference
+15. Security Practices & Secret Handling
+Never commit .env or real secrets; keep env.example placeholder-only and enable GitHub secret scanning and push protection.
 
-| Method & path | Auth (`X-API-Key`) | Purpose |
-|---|---|---|
-| `GET /` | Public | Serves the ColdTrace Operations Console web UI. |
-| `GET /healthz` | Public | Health check and active location list. |
-| `POST /ingest` | **Required** | Ingests a 30-min sensor reading, updates rolling features and raises alerts (`warming_up` for the first 50 readings per location). |
-| `POST /alerts/{id}/explain` | **Required** | Calls NVIDIA NIM to produce a schema-validated incident explanation grounded in `evidence_sha256` (returns `503` if NIM is unreachable while keeping the alert valid). |
-| `GET /api/locations` | Optional | Returns current status and latest telemetry for `JHB-DC01`, `DBN-DC02` and `CPT-DC03`. |
-| `GET /api/alerts` | Optional | Lists all detected alerts with `evidence_sha256` and lifecycle state (`OPEN`, `ACKNOWLEDGED`, `CLOSED`). |
-| `POST /api/alerts/{id}/ack` | **Required** | Transitions an alert from `OPEN` to `ACKNOWLEDGED`. |
-| `POST /api/alerts/{id}/close` | **Required** | Transitions an alert to `CLOSED`. |
-| `POST /api/demo/replay` | **Required** | Replays `data/sample_14d.csv` into the streaming detector for live demonstrations. |
+Rotate secrets via Secret Manager versions and roll out new Cloud Run revisions reading :latest, disabling superseded versions after verification.
 
-<details>
-<summary><b>Example: ingest a reading</b></summary>
+Before pushing changes, run local checks as applicable:
 
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $INGEST_API_KEY" \
-  -d '{
-        "location_id": "JHB-DC01",
-        "timestamp": "2026-11-13T08:30:00Z",
-        "temperature_c": 9.4,
-        "humidity_pct": 61.2,
-        "cooling_load_pct": 78.0
-      }'
-```
-
-> Field names above are illustrative. Check `/docs` for the exact request schema.
-
-</details>
-
----
-
-## 14. Security & Design Guardrails
-
-- **AI safety:** Detection never depends on the LLM. Every NVIDIA NIM note is explicitly labeled **"AI-GENERATED, REVIEW BEFORE ACTING"** and cannot automatically acknowledge or close a case.
-- **Tamper-evident evidence:** Each alert computes a deterministic `evidence_sha256` over the exact triggering sensor rows.
-- **Authentication:** `X-API-Key` is verified with constant-time comparison.
-- **Keyless CI/CD:** GitHub Actions uses Workload Identity Federation; no long-lived service-account keys.
-- **Least privilege:** The runtime service account and every human role are scoped to the minimum required; the security reviewer is strictly read-only.
-- **Secrets:** Stored in Secret Manager and injected at runtime; engineers hold `secretmanager.viewer` (metadata) only, never raw values.
-- **Auditability:** Cloud Audit Logs and Cloud Monitoring alerts are reviewed by the Cyber Security Reviewer.
-- **Security hygiene:** Secret handling, rotation and local pre-push checks are documented in [section 15](#15-security-practices--secret-handling).
-- **Persistence:** Firestore provides durable alert state across container restarts and instances. If Firestore is not configured, state falls back to in-memory and resets on cold start.
-
----
-
-## 15. Security Practices & Secret Handling
-
-### 15.1 Layers at a glance
-
-| Layer | Control | Where it applies |
-|---|---|---|
-| Secrets | Secret Manager, `.gitignore`d `.env`, placeholder-only `env.example`, GitHub secret scanning and push protection | Repo settings and GCP |
-| CI/CD identity | Workload Identity Federation, no JSON keys, repo-scoped trust rule | `ci-deploy.yml` and Terraform |
-| Code quality | `pytest` and Terraform `fmt`/`validate` on every push and pull request | `ci-deploy.yml` |
-| Dependencies | `pip-audit` run locally before pushing | Developer machine |
-| Runtime | Cloud Audit Logs, Cloud Monitoring | Managed in GCP |
-
-### 15.2 Secret security
-
-**Rules**
-1. Never commit real values. `env.example` holds placeholders only; `.env` is in `.gitignore`.
-2. Production secrets (`INGEST_API_KEY`, `NVIDIA_API_KEY`) live only in **Secret Manager** and are bound to Cloud Run with `--set-secrets`.
-3. Only `coldtrace-runtime-sa` can read secret values. Engineers and the auditor hold `secretmanager.viewer` (metadata only).
-4. CI uses short-lived OIDC credentials through WIF, so there is no key file to leak.
-5. Turn on GitHub **Secret scanning** and **Push protection** (Settings → Code security) so leaks are blocked before they reach the repo.
-
-**Rotation procedure** (owner: Moorthy R)
-```bash
-# 1. Create a new secret version
-printf '%s' "<NEW_VALUE>" | gcloud secrets versions add INGEST_API_KEY --data-file=-
-
-# 2. Roll out: a new Cloud Run revision reads ":latest"
-gcloud run services update coldtrace-app --region us-central1 --update-secrets INGEST_API_KEY=INGEST_API_KEY:latest
-
-# 3. After verifying, disable the old version
-gcloud secrets versions list INGEST_API_KEY
-gcloud secrets versions disable <OLD_VERSION_ID> --secret INGEST_API_KEY
-```
-
-**If a secret is leaked**
-1. Revoke or rotate it immediately (above); for the NVIDIA key, regenerate it in NGC.
-2. Check Cloud Audit Logs and Cloud Run request logs for misuse (Peter Opiyo).
-3. Remove it from git history (`git filter-repo` or BFG), then force-push after coordinating with the team. Rotation is the real fix; history cleanup only reduces further exposure.
-4. Record what happened and how it was caught.
-
-### 15.3 Local pre-push checklist
-
-Run these on your machine before opening a pull request. They are optional helpers and are not part of `ci-deploy.yml`.
-
-```bash
+Bash
 cd Backend && pytest -q tests && cd ..
-pip install pip-audit && pip-audit -r Backend/requirements.txt
 gitleaks detect --source . --redact --verbose
 terraform -chdir=terraform fmt -check -recursive
-```
+16. Ownership Summary (RACI)
+R = Responsible, A = Accountable, C = Consulted, I = Informed
 
-> `fastapi` and `starlette` are pinned to compatible ranges so the Starlette `TestClient` keeps working. Raise the pins deliberately in a pull request, never implicitly.
+Area	Moorthy R	Chantell N.	Mbambala T	Peter O.
+GCP project, billing & budget guardrails	A/R	I	I	I
+Terraform IaC	A/R		C	C
+GitHub Actions CI/CD (ci-deploy.yml) & WIF	A/R		C	C
+Secret Manager & rotation	A/R		I	C
+Container build & Cloud Run deploy	A		R	I
+Pub/Sub, Scheduler, Firestore pipelines	A		R	I
+AI model, NIM integration & evaluation	I	C	A/R	I
+BigQuery loading (bq load) & schema validation	I	A/R	C	I
+Partition-aware querying & trend validation	I	A/R	C	I
+IAM, WIF & audit-log review	C		C	A/R
+Monitoring alerts & evidence integrity review	C		C	A/R
+Secret handling, rotation & leak response	A/R		I	R
+Branch protection & required checks	A/R		C	C
+Production reliability & cost/quota oversight	A/R		R	C
+17. Implementation Plan, Risk Register & Roadmap
+17.1 Key Milestones
+Core Pipeline & UI Polish: Category-aware safe bands (2°C–8°C pharma/biologics; ≤ 2°C perishables), 24h causal rolling features, OPEN → ACKNOWLEDGED → CLOSED workflow, evidence_sha256 sealing, and replay against cold_chain_labeled_2022_2026.csv.
 
----
+Evaluation, GCP & Security Hardening: Random Forest vs. SOP rules benchmark (N = 120, 0.918 vs. 0.626 F1), human-reviewed NVIDIA NIM explanations, BigQuery (254,160 rows) / Firestore / Pub/Sub integration, and keyless WIF + Secret Manager + Gitleaks guardrails.
 
-## 16. Ownership Summary (RACI)
+Submission Packaging: Finalized PROJECT_DOCS/RESEARCH_SUMMARY.md, 8-slide deck (PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx), recorded walkthrough (≤ 5 min), and README.md links.
 
-**R** = Responsible, **A** = Accountable, **C** = Consulted, **I** = Informed
+17.2 Risk Register
+Risk	Likelihood	Impact	Mitigation
+NVIDIA NIM API key or rate limits fail	Medium	Low	Rules and Random Forest remain primary detectors; NIM is optional and clearly labeled for human review
+Cloud Run cost or quota pressure	Low	Medium	Keep scale-to-zero (--min-instances 0), bounded concurrency/instances, and budget alerts
+Synthetic sensor data differs from real cold rooms	Medium	High	Validate category bands (2°C–8°C / ≤ 2°C) and run physical probe calibration before production cutover
+Credential or API key leak	Low	High	Enforce Gitleaks/secret checks, store secrets in Secret Manager, and rotate keys immediately if exposed
+Cloud Run cold starts during demos/judging	Medium	Low	Warm/verify endpoints prior to walkthroughs while preserving scale-to-zero configuration
+17.3 What's Next After BUILD
+Add the final ≤ 5-minute walkthrough video link at the top of README.md and verify all submission links.
 
-| Area | Moorthy R | Chantell N. | Mbambala T | Peter O. |
-|---|:---:|:---:|:---:|:---:|
-| GCP project, billing & `$1/month` budget | **A/R** | I | I | I |
-| Terraform IaC | **A/R** | | C | C |
-| GitHub Actions CI/CD (`ci-deploy.yml`) & WIF | **A/R** | | C | C |
-| Secret Manager & rotation | **A/R** | | I | C |
-| Container build & Cloud Run deploy | A | | **R** | I |
-| Pub/Sub, Scheduler, Firestore pipelines | A | | **R** | I |
-| AI model, NIM integration & evaluation | I | C | **A/R** | I |
-| BigQuery loading (`bq load`) & schema validation | I | **A/R** | C | I |
-| Partition-aware querying & trend validation | I | **A/R** | C | I |
-| IAM, WIF & audit-log review | C | | C | **A/R** |
-| Monitoring alerts & evidence integrity review | C | | C | **A/R** |
-| Secret handling, rotation & leak response | **A/R** | | I | R |
-| Dependency updates (local `pip-audit`) | **A/R** | | R | C |
-| Branch protection & required checks | **A/R** | | C | C |
-| Production reliability & cost/quota oversight | **A/R** | | R | C |
+Calibrate physical sensors across JHB-DC01, DBN-DC02, and CPT-DC03 and pilot real-sensor streams before expanding toward 50 sites.
 
----
+18. License
+This project is licensed under the MIT License. See the LICENSE file in the repository root for full terms.
 
-*ColdTrace is built for SDG 3: because a vaccine that spoils in the dark helps no one.*
----
-
-## 17. Implementation Plan, Risk Register & Roadmap
-
-### 17.1 BUILD Timeline & Milestones
-
-* **Re-Audit v3 Polish & UI Consistency (Nov 24, 2026):** Fix category band evaluation (`2°C–8°C` vs. `≤ 2°C`), live KPI/AI chip/filter controls, hash wrapping, and duplicate `/api/demo/replay` cleanup.
-* **Problem Evidence, NIM Evaluation ($n \ge 100$) & Team Deliverables (Nov 25–26, 2026):** Add cited cold-chain evidence and friction table in Section 1, re-run NIM comparison at $n \ge 100$, ship validation/BigQuery loading and Pub/Sub/storage clarity, and document security/key-rotation notes.
-* **Submission Packaging & Final Verification (Nov 27–28, 2026):** Finalize research summary (`PROJECT_DOCS/RESEARCH_SUMMARY.md`), slide deck, and 3–5 minute recorded walkthrough; link them at the top of the README; run full local checks and open the team PR to `main` ahead of the Nov 29, 2026 deadline.
-
-### 17.2 Product Deliverables, Owners & Progress
-
-| Deliverable | Owner | Status | Proof / Reference |
-|---|---|---|---|
-| Category-aware band evaluation & excursion handling | Moorthy R | Done | `Backend/coldtrace/api.py`, `Backend/tests/` |
-| Batches UI, category chips, filter cycling & hash wrap | Moorthy R | Done | `Backend/frontend/index.html`, `Backend/frontend/app.js` |
-| Problem grounding, friction table & NIM $n \ge 100$ run | Muedi / Team | Done | `README.md` (§1), `Backend/artifacts/nim_comparison_summary.json` |
-| Telemetry validation module & BigQuery load script | Chantell N. | In progress | `Backend/coldtrace/`, `Backend/scripts/` |
-| Pub/Sub / storage mode clarity & secret rotation notes | Peter O. / Moorthy R | In progress | `terraform/`, `README.md` (§15–§16) |
-| Research summary, deck, walkthrough video & top links | All | In progress (summary & top links done) | `PROJECT_DOCS/RESEARCH_SUMMARY.md`, `README.md` |
-
-### 17.3 Risk Register
-
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| **NVIDIA NIM API key or rate limits fail** | Medium | Low | Rules and Random Forest remain primary detectors; NIM is optional and clearly labeled for human review |
-| **Free-tier / `$1/month` budget quota pressure** | Low | Medium | Keep scale-to-zero Cloud Run defaults (no forced `min-instances`), budget alerts, and lightweight payloads |
-| **Synthetic sensor data differs from real cold rooms** | Medium | High | Validate category bands (`2°C–8°C` / `≤ 2°C`) and run physical probe calibration before production cutover |
-| **Credential or API key leak** | Low | High | Enforce Gitleaks in CI/pre-push checks, store secrets in Secret Manager, and rotate keys immediately if exposed |
-| **Cloud Run cold starts during demos/judging** | Medium | Low | Warm/verify endpoints prior to walkthroughs while preserving zero-cost scale-to-zero configuration |
-
-### 17.4 What's Next After BUILD
-
-* Complete per-member commits across all four teammates so individual contributions are clearly reflected in git history.
-* Publish `PROJECT_DOCS/RESEARCH_SUMMARY.md`, the ~10-slide deck, and the 3–5 minute end-to-end walkthrough video, and link them at the top of `README.md`.
-* Pilot calibrated real-sensor streams across `JHB-DC01`, `DBN-DC02`, and `CPT-DC03` before expanding toward multi-site rollout.
+ColdTrace is built for SDG 3: because a vaccine that spoils in the dark helps no one.
