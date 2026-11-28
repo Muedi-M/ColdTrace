@@ -4,7 +4,7 @@ Owner: Peter Opiyo (Cloud Cybersecurity lane). Review status: **draft prepared b
 
 ## 1. What must stay true
 
-1. Only authorised callers can change a case (assign, resolve, inject, replay, ingest).
+1. Only authorised callers can change a case (assign, resolve, inject, ingest). The console may run Replay and Ask AI without the operator key: Ask AI only adds a triage note (no state change) and is rate-limited to one call per case per 30 s and 60 per hour.
 2. Nobody, including the team, can silently change what a sensor reported or what a reviewer did.
 3. No secret is ever in the repository, the page source or the logs.
 

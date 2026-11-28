@@ -23,6 +23,19 @@ def test_write_endpoints_need_key():
     assert client.post("/api/ui/investigations/INV-2047/resolve").status_code == 401
 
 
+def test_ask_ai_needs_key_or_same_origin_and_is_rate_limited():
+    from coldtrace import api as A
+    A._ai_calls["per_case"].clear(); A._ai_calls["window"].clear()
+    url = "/api/ui/investigations/INV-2048/ask-ai"
+    assert client.post(url).status_code == 401                                   # no key, no origin
+    assert client.post(url, headers={"Origin": "https://evil.example"}).status_code == 401
+    same = {"Origin": "http://testserver"}
+    assert client.post(url, headers=same).status_code == 200                     # console call
+    assert client.post(url, headers=same).status_code == 429                     # per-case limit
+    assert client.post(url, headers=KEY).status_code == 200                      # operator key bypasses the limit
+    assert client.post("/api/ui/investigations/INV-2048/resolve", headers=same).status_code == 401
+
+
 def test_pubsub_push_requires_token(monkeypatch):
     monkeypatch.setenv("PUBSUB_PUSH_TOKEN", "t0k")
     env = {"message": {"data": base64.b64encode(json.dumps({

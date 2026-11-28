@@ -185,6 +185,36 @@ def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="
     raise HTTPException(401, "invalid or missing X-API-Key")
 
 
+_ai_calls: dict = {"per_case": {}, "window": []}
+AI_PER_CASE_SECONDS = int(os.getenv("AI_PER_CASE_SECONDS", "30"))
+AI_PUBLIC_PER_HOUR = int(os.getenv("AI_PUBLIC_PER_HOUR", "60"))
+
+
+def require_demo_ai_auth(inv_id: str, request: Request, x_api_key: str = Header(default="")) -> None:
+    """Ask AI from the console: a valid X-API-Key, or a same-origin browser request under a rate limit.
+
+    Ask AI only writes a triage note (human review required) and never changes case state,
+    so the console may call it without the operator key, as it does for Replay. Assign,
+    resolve, inject and ingest still require the key.
+    """
+    try:
+        require_key(x_api_key=x_api_key)
+        return
+    except HTTPException as exc:
+        if exc.status_code != 401:
+            raise
+    require_demo_replay_auth(request, x_api_key="")  # same-origin check; raises 401 otherwise
+    now = datetime.now(timezone.utc).timestamp()
+    last = _ai_calls["per_case"].get(inv_id, 0.0)
+    if now - last < AI_PER_CASE_SECONDS:
+        raise HTTPException(429, f"Ask AI was just run for {inv_id}; try again in {int(AI_PER_CASE_SECONDS - (now - last)) + 1}s")
+    _ai_calls["window"] = [t for t in _ai_calls["window"] if now - t < 3600]
+    if len(_ai_calls["window"]) >= AI_PUBLIC_PER_HOUR:
+        raise HTTPException(429, "Ask AI hourly limit reached for the public console; use an operator key")
+    _ai_calls["per_case"][inv_id] = now
+    _ai_calls["window"].append(now)
+
+
 # --- Cold Chain Alerts Video UI Endpoints (Backed by cold_chain_labeled_2022_2026.csv) ---
 import csv
 from pathlib import Path
@@ -468,7 +498,7 @@ async def assign_video_investigation(inv_id: str, req: Request):
     })
     return {"status": "assigned", "inv_id": inv_id, "assignee": assignee}
 
-@app.post("/api/ui/investigations/{inv_id}/ask-ai", dependencies=[Depends(require_key)])
+@app.post("/api/ui/investigations/{inv_id}/ask-ai", dependencies=[Depends(require_demo_ai_auth)])
 def ask_video_ai(inv_id: str):
     inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
     if not inv:

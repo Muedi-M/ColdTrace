@@ -409,7 +409,8 @@ gcloud run deploy coldtrace-app \
 | `GET /api/locations` & `GET /api/alerts` | Optional | Returns hub telemetry and alerts with `evidence_sha256` and lifecycle state |
 | `POST /api/alerts/{id}/ack` & `/close` | `X-API-Key` | Transitions alerts through `OPEN → ACKNOWLEDGED → CLOSED` |
 | `POST /alerts/{id}/explain` | `X-API-Key` | Generates a schema-validated NVIDIA NIM incident note (`AI-GENERATED, REVIEW BEFORE ACTING`) |
-| `POST /api/ui/investigations/{id}/assign` · `/ask-ai` · `/resolve` | `X-API-Key` | Case workflow; each call appends a hash-chained case event; closed cases return `409` on re-assign |
+| `POST /api/ui/investigations/{id}/assign` · `/resolve` | `X-API-Key` | Case workflow; each call appends a hash-chained case event; closed cases return `409` on re-assign |
+| `POST /api/ui/investigations/{id}/ask-ai` | `X-API-Key` / Console (rate-limited) | Writes a NIM triage note only (no state change); same-origin console calls limited to one per case per 30 s and 60 per hour |
 | `GET /api/insights?days=30` | Public | Insights MVP: frequency by location, detection-to-review, avg + median cycle time, throughput, overdue, burndown |
 | `GET /api/cases` · `GET /api/cases/{id}/events` | Public | Case timestamps and full event log with `chain_valid` |
 | `GET /api/thresholds` · `GET /api/validation` | Public | Versioned thresholds with SHA-256; validation report and reference-integrity check |
