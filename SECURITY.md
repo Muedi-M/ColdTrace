@@ -34,12 +34,12 @@ Limitation: the in-process chain proves integrity of what the app holds; the Big
 
 * API key, NIM keys and push token live in Secret Manager and reach Cloud Run as env vars (Terraform).
 * The console stores the operator's key in `localStorage` only after they type it; no key is in the HTML.
-* **Action:** the build of 20 Nov 2026 shipped a key value in `index.html`. Rotate it: add a new Secret Manager version, roll a Cloud Run revision, disable the old version (runbook in README §15.2).
+* **Action:** an NVIDIA API key was committed in `env.example` on 19 Nov 2026 (commit `cdb6b74`) and deleted on 24 Nov; it remains in git history, so it is treated as exposed. It has been revoked at build.nvidia.com, a new key stored in Secret Manager, and the old commit fingerprint added to `.gitleaksignore` so CI flags only new leaks. (The value in the 19–24 Nov `index.html` was the local placeholder `change-me-…`, not a production key.)
 * `tools/ctpush` blocks staged NVIDIA/Google/GitHub keys, private keys, `.env` files and files over 20 MB; CI runs Gitleaks, CodeQL, Bandit, pip-audit and OWASP ZAP.
 
 ## 5. Open items
 
-- [ ] Rotate the key exposed in the 20 Nov build.
+- [ ] Confirm the NVIDIA key from `env.example` (19 Nov) is revoked and the new key is live in Secret Manager.
 - [ ] Confirm `terraform/variables.tf` `github_repo` matches the repository the WIF trust should allow (`Muedi-M/ColdTrace`).
 - [ ] Decide whether the public read endpoints need IAP before any real staff names are used.
 

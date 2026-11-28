@@ -26,7 +26,7 @@ Standing meeting: weekly, 30 minutes, plus a written Friday gate check in the te
 | 4c | 28 Nov | Same validation rules in the app: quarantine with reasons, reference joins, versioned thresholds | Muedi (from Chantell's rules) | ✅ Done | `Backend/coldtrace/validation.py`, `Backend/config/thresholds.json` |
 | 4d | 28 Nov | Case event log + Insights MVP (frequency by location, detection-to-review, avg + median cycle time, throughput, overdue, burndown) | Muedi | ✅ Done | `Backend/coldtrace/cases.py`, `GET /api/insights`, Quality & Audit screen |
 | 4e | 28 Nov | Pub/Sub publishing + push endpoint, BigQuery case-events subscription, `/health` alias, console fixes | Muedi, Moorthy (Terraform review) | ✅ Done in code · `terraform plan` pending | `Backend/coldtrace/pubsub.py`, `terraform/pubsub_case_events.tf` |
-| 4f | 28 Nov | Security notes, endpoint auth + tamper tests; rotate the key exposed in the 20 Nov build | Peter | 🟡 Draft, sign-off pending | `SECURITY.md`, `Backend/tests/test_security_endpoints.py` |
+| 4f | 28 Nov | Security notes, endpoint auth + tamper tests; revoke the NVIDIA key committed in env.example on 19 Nov | Peter | 🟡 Draft, sign-off pending | `SECURITY.md`, `Backend/tests/test_security_endpoints.py` |
 | 4g | 26–28 Nov | Balanced benchmark n = 120 (RF 0.918 vs rules 0.626 macro-F1); live NIM run at n = 120 | Muedi | 🟡 RF/rules done; NIM run used mock provider | `Backend/artifacts/nim_comparison_summary.json` |
 | 4h | 25–28 Nov | User interviews and survey | Muedi, Chantell | ⬜ To do | `PROJECT_DOCS/USER_RESEARCH.md` |
 | 4i | 27–28 Nov | README, 3-page brief, deck, recorded walkthrough | All | ✅ Done | README top links |
@@ -49,7 +49,7 @@ Standing meeting: weekly, 30 minutes, plus a written Friday gate check in the te
 | R1 | Synthetic data does not reflect real fridges, so accuracy claims do not transfer | High | High | Report all metrics as simulated; validation module ready for a real logger export; field replay is first next step | Muedi |
 | R2 | False alerts erode trust (alarm fatigue) | Medium | High | Debounce (2 consecutive, conf ≥ 0.5); false alerts per location-day reported beside recall; thresholds versioned and reviewable | Muedi, Chantell |
 | R3 | NVIDIA API outage, rate limit or key failure | Medium | Medium | Detection never depends on NIM; retries with backoff; console shows an honest error and keeps the last note | Muedi |
-| R4 | Secret leak | Medium | High | Secret Manager, hashed API keys, Gitleaks on every push, rotation runbook; rotate the key that shipped in the 20 Nov HTML | Peter |
+| R4 | Secret leak | Medium | High | Secret Manager, hashed API keys, Gitleaks on every push, rotation runbook; revoked the NVIDIA key committed in env.example on 19 Nov; .gitleaksignore covers only that historical commit | Peter |
 | R5 | Evidence altered after the fact | Low | High | SHA-256 sealed evidence; hash-chained case events; `/api/cases/{id}/events` exposes `chain_valid` | Peter |
 | R6 | GCP free-tier quota or budget exceeded | Low | Medium | Budget alert, batch loads, Pub/Sub → BigQuery subscription instead of streaming inserts | Moorthy |
 | R7 | Cold start during judging makes the app look broken | Medium | Medium | Warm the service before demos and judging; keep scale-to-zero for the $1/month budget | Moorthy |
