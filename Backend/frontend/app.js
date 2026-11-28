@@ -130,7 +130,8 @@ const STAFF = [
         </div>`;
       }
 
-    function sparklineHTML(series, height = 82) {
+    function sparklineHTML(series, height = 82, category = 'pharma') {
+      const pharma = isPharmaCategory(category);
       const pts = (series && series.length > 1) ? series : [1.1, 1.3, 1.2, 1.5, 1.4, 2.8, 5.3];
       const w = 340, h = height, min = 0, max = 11;
       const yThresh = h - ((2.0 - min) / (max - min)) * h;
@@ -142,8 +143,9 @@ const STAFF = [
       });
       const poly = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
       const last = coords[coords.length - 1];
-      const stroke = (last.v > 8.0 || last.v < 2.0) ? '#DC2626' : '#2563EB';
-      const fill = (last.v > 8.0 || last.v < 2.0) ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)';
+      const out = isTempOutOfRange(last.v, category);
+      const stroke = out ? '#DC2626' : '#2563EB';
+      const fill = out ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)';
       const areaPts = `0,${h} ${poly} ${(w - 30)},${h}`;
       const dots = coords.map(c => `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="2.6" fill="#FFFFFF" stroke="${stroke}" stroke-width="1.6"><title>${c.v.toFixed(1)} °C</title></circle>`).join('');
 
@@ -152,8 +154,8 @@ const STAFF = [
         <polygon fill="${fill}" points="${areaPts}" />
         <line x1="0" y1="${yThresh}" x2="${w - 28}" y2="${yThresh}" stroke="#94A3B8" stroke-dasharray="3,3" stroke-width="1.2" />
         <text x="${w - 24}" y="${yThresh + 3}" font-size="9.5" font-weight="600" fill="#64748B">2°C</text>
-        <line x1="0" y1="${yHighThresh}" x2="${w - 28}" y2="${yHighThresh}" stroke="#DC2626" stroke-dasharray="3,3" stroke-width="1.2" />
-        <text x="${w - 24}" y="${yHighThresh + 3}" font-size="9.5" font-weight="600" fill="#DC2626">8°C</text>
+        ${pharma ? `<line x1="0" y1="${yHighThresh}" x2="${w - 28}" y2="${yHighThresh}" stroke="#DC2626" stroke-dasharray="3,3" stroke-width="1.2" />
+        <text x="${w - 24}" y="${yHighThresh + 3}" font-size="9.5" font-weight="600" fill="#DC2626">8°C</text>` : ''}
         <polyline fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${poly}" />
         ${dots}
         <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4" fill="${stroke}" />
@@ -535,7 +537,7 @@ function renderBatches() {
             🧊 ${b.unitName} &nbsp;•&nbsp; 📦 ${b.units} / ${b.units} units &nbsp;•&nbsp; 🕒 Arrived ${b.arrived}
           </div>
           ${b.status === 'In range' ? `<div style="margin-top:12px; display:grid; grid-template-columns:1.3fr 1fr; gap:12px; align-items:center;">
-            <div>${sparklineHTML(b.series, 46)}</div>
+            <div>${sparklineHTML(b.series, 46, b.category)}</div>
             <div style="background:var(--surface-soft); border:1px solid var(--border); padding:10px; border-radius:12px; font-size:11.5px;">
               <strong>🚚 ${b.shipmentId}</strong>
               <div><span class="badge progress" style="display:inline-block;margin:4px 0;">In storage</span></div>
@@ -567,7 +569,7 @@ function renderBatches() {
             <div><div style="font-size:11.5px;color:var(--muted);">Peak</div><div class="mono" style="font-size:21px;font-weight:800;">${b.peak.toFixed(1)}°C</div></div>
             <div><div style="font-size:11.5px;color:var(--muted);">Out-of-band</div><div class="mono" style="font-size:21px;font-weight:800;">${b.aboveHours}h</div></div>
           </div>
-          ${sparklineHTML(b.series, 92)}
+          ${sparklineHTML(b.series, 92, b.category)}
           <div style="font-size:11.5px; color:var(--muted); margin-top:8px;">30-minute telemetry cadence from sensor ${b.sensorId}.</div>
         </div>
         <div class="home-grid">

@@ -14,6 +14,7 @@
 - **Live Console:** <https://coldtrace-app-644777661209.us-central1.run.app>
 - **3-Page Brief:** [PROJECT_DOCS/ColdTrace_Brief.pdf](PROJECT_DOCS/ColdTrace_Brief.pdf)
 - **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)
+- **Silent app walkthrough (83 s) & screenshots:** [PROJECT_DOCS/Screenshots and walkthrough/](<PROJECT_DOCS/Screenshots and walkthrough/>)
 - **Presentation Deck (8 slides):** [PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx](<PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx>)
 - **Recorded Walkthrough (≤ 5 min):** [Watch on Google Drive](https://drive.google.com/file/d/1iflIPeFDiDTi-kW6cpJSzHZdk1qhVrG0/view?usp=sharing)
 - **Implementation Plan, Owners & Risks:** [PROJECT_DOCS/IMPLEMENTATION_PLAN.md](PROJECT_DOCS/IMPLEMENTATION_PLAN.md) · **Security:** [SECURITY.md](SECURITY.md)
@@ -187,7 +188,8 @@ coldtrace/
 │   ├── RESEARCH_SUMMARY.md                                # Research & evaluation summary
 │   ├── IMPLEMENTATION_PLAN.md                             # Timeline, owners, progress, risk register
 │   ├── USER_RESEARCH.md                                   # Interview guide & evidence log
-│   └── ColdTrace — Cold-Chain Operations Console (1).pptx # 8-slide presentation deck
+│   ├── ColdTrace — Cold-Chain Operations Console (1).pptx # 8-slide presentation deck
+│   └── Screenshots and walkthrough/                       # 83 s silent walkthrough + console screenshots
 ├── SECURITY.md                                            # Endpoint access, audit chain, secrets
 ├── tools/ctpush                                           # Team git CLI (check, commit, push, PR)
 ├── Validation_coldtrace.sql · bq_load_coldtrace.sh        # BigQuery load & validation queries

@@ -1,6 +1,6 @@
 # ColdTrace security notes — evidence and endpoints
 
-Owner: Peter Opiyo (Cloud Cybersecurity lane). Review status: **draft — review and sign below before merge.**
+Owner: Peter Opiyo (Cloud Cybersecurity lane). Review status: **draft prepared by the team; Peter Opiyo's security sign-off is pending.**
 
 ## 1. What must stay true
 

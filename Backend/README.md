@@ -13,7 +13,7 @@ Owner: Muedi (AI research foundations: baselines and evaluation). Status: Week 2
 | `coldtrace/evaluate.py` | Event-level recall, time-to-detect, false alerts per location-day |
 | `coldtrace/service.py` | Per-location streaming detector, debounced alerts, sha256-sealed evidence |
 | `coldtrace/nim.py` | NVIDIA NIM client (`requests`, retries, JSON validation) + classify/explain prompts |
-| `coldtrace/api.py` | FastAPI for Cloud Run: `/ingest`, `/alerts/{id}/explain`, `/healthz` |
+| `coldtrace/api.py` | FastAPI for Cloud Run: `/ingest`, `/alerts/{id}/explain`, `/health` |
 | `scripts/train_eval.py` | Train + score threshold-only vs rules vs RF; writes `artifacts/metrics.json` |
 | `scripts/replay.py` | Replays sample readings through the detector (`--local`) or a running API; prints every alert |
 | `scripts/compare_nim.py` | Scores NIM models against the same labeled windows as the baselines |
