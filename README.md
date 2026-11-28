@@ -467,7 +467,7 @@ gcloud run deploy coldtrace-app \
 | 3 | 16–22 Nov | Cloud Run, Terraform, WIF CI/CD, Secret Manager, security scans, console | Moorthy, Peter | ✅ |
 | 4 | 23–27 Nov | BigQuery load + SQL validation checks | Chantell | ✅ |
 | 4 | 26–28 Nov | n = 120 benchmark; in-app validation, case log, Insights MVP, Pub/Sub publishing | Muedi | ✅ |
-| 4 | 27–28 Nov | Security notes & endpoint tests (sign-off pending), README, brief, 8-slide deck, walkthrough | Peter, Moorthy, All | ✅ |
+| 4 | 27–28 Nov | Security notes & endpoint tests (approved by Peter, 28 Nov), README, brief, 8-slide deck, walkthrough | Peter, Moorthy, All | ✅ |
 
 Full plan with proof links, resources and a 10-item risk register: [PROJECT_DOCS/IMPLEMENTATION_PLAN.md](PROJECT_DOCS/IMPLEMENTATION_PLAN.md).
 

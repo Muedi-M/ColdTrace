@@ -1,6 +1,6 @@
 # ColdTrace security notes — evidence and endpoints
 
-Owner: Peter Opiyo (Cloud Cybersecurity lane). Review status: **draft prepared by the team; Peter Opiyo's security sign-off is pending.**
+Owner: Peter Opiyo (Cloud Cybersecurity lane). Review status: **reviewed and approved by Peter Opiyo (team Slack, 28 Nov 2026).**
 
 ## 1. What must stay true
 

@@ -26,9 +26,9 @@ Standing meeting: weekly, 30 minutes, plus a written Friday gate check in the te
 | 4c | 28 Nov | Same validation rules in the app: quarantine with reasons, reference joins, versioned thresholds | Muedi (from Chantell's rules) | ✅ Done | `Backend/coldtrace/validation.py`, `Backend/config/thresholds.json` |
 | 4d | 28 Nov | Case event log + Insights MVP (frequency by location, detection-to-review, avg + median cycle time, throughput, overdue, burndown) | Muedi | ✅ Done | `Backend/coldtrace/cases.py`, `GET /api/insights`, Quality & Audit screen |
 | 4e | 28 Nov | Pub/Sub publishing + push endpoint, BigQuery case-events subscription, `/health` alias, console fixes | Muedi, Moorthy (Terraform review) | ✅ Done in code · `terraform plan` pending | `Backend/coldtrace/pubsub.py`, `terraform/pubsub_case_events.tf` |
-| 4f | 28 Nov | Security notes, endpoint auth + tamper tests; revoke the NVIDIA key committed in env.example on 19 Nov | Peter | 🟡 Draft, sign-off pending | `SECURITY.md`, `Backend/tests/test_security_endpoints.py` |
+| 4f | 28 Nov | Security notes, endpoint auth + tamper tests; revoke the NVIDIA key committed in env.example on 19 Nov | Peter | ✅ Reviewed & approved by Peter (28 Nov) | `SECURITY.md`, `Backend/tests/test_security_endpoints.py` |
 | 4g | 26–28 Nov | Balanced benchmark n = 120 (RF 0.918 vs rules 0.626 macro-F1); live NIM run at n = 120 | Muedi | 🟡 RF/rules done; NIM run used mock provider | `Backend/artifacts/nim_comparison_summary.json` |
-| 4h | 25–28 Nov | User interviews and survey | Muedi, Chantell | ⬜ To do | `PROJECT_DOCS/USER_RESEARCH.md` |
+| 4h | 25–28 Nov | Primary user interviews: outside BUILD scope. Problem grounded in cited evidence and illustrative personas; interview guide ready | Muedi, Chantell | ➡️ Next phase | `PROJECT_DOCS/USER_RESEARCH.md` |
 | 4i | 27–28 Nov | README, 3-page brief, deck, recorded walkthrough | All | ✅ Done | README top links |
 | Gate | 27 Nov 18:00 SAST | Click-through test on desktop and phone; PR from team branch to `main`, **not merged** | Muedi | ⬜ | PR URL |
 
