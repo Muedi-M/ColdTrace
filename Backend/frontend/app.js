@@ -672,7 +672,11 @@ function renderBatches() {
       } catch (_) {}
     }
 
+    let aiRequestInFlight = false;
+
     async function askNvidiaAI(invId) {
+      if (aiRequestInFlight) return;
+      aiRequestInFlight = true;
       const box = document.getElementById('aiNarrative');
       const prev = box.innerText;
       box.innerText = 'Querying NVIDIA NIM model with sealed sensor evidence...';
@@ -684,6 +688,8 @@ function renderBatches() {
         await refreshAll();
       } catch (_) {
         box.innerText = prev;
+      } finally {
+        aiRequestInFlight = false;
       }
     }
 
