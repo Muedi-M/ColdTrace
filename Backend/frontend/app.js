@@ -280,6 +280,15 @@ const STAFF = [
             }
           }
         } catch (_) {}
+        if (res.status === 401) {
+          // Write actions (assign, Ask AI, resolve, replay) need the operator key.
+          showToast('🔑 Operator key needed: enter your X-API-Key in the 🐻‍❄️ panel, then try again');
+          const drawer = document.getElementById('configDrawer');
+          if (drawer && !drawer.classList.contains('open')) drawer.classList.add('open');
+          const keyEl = document.getElementById('apiKey');
+          if (keyEl) keyEl.focus();
+          throw new Error(`${errLabel} (HTTP 401)`);
+        }
         const msg = `${errLabel} (HTTP ${res.status})${detail ? ': ' + String(detail).slice(0, 140) : ''}`;
         showToast(`✕ ${msg}`);
         throw new Error(msg);
