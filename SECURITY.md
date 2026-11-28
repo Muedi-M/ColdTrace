@@ -34,7 +34,7 @@ Limitation: the in-process chain proves integrity of what the app holds; the Big
 
 * API key, NIM keys and push token live in Secret Manager and reach Cloud Run as env vars (Terraform).
 * The console stores the operator's key in `localStorage` only after they type it; no key is in the HTML.
-* **Action:** an NVIDIA API key was committed in `env.example` on 19 Nov 2026 (commit `cdb6b74`) and deleted on 24 Nov; it remains in git history, so it is treated as exposed. It has been revoked at build.nvidia.com, a new key stored in Secret Manager, and the old commit fingerprint added to `.gitleaksignore` so CI flags only new leaks. (The value in the 19–24 Nov `index.html` was the local placeholder `change-me-…`, not a production key.)
+* **Action:** an NVIDIA API key was committed in `env.example` on 19 Nov 2026 (commit `cdb6b74`) and deleted on 24 Nov; it remains in git history, so it is treated as exposed. It has been revoked at build.nvidia.com, a new key stored in Secret Manager, and commit `cdb6b74` allow-listed in `.gitleaks.toml` (along with `c790032`, a dummy key in a unit test) so the full-history scan flags only new leaks. (The value in the 19–24 Nov `index.html` was the local placeholder `change-me-…`, not a production key.)
 * `tools/ctpush` blocks staged NVIDIA/Google/GitHub keys, private keys, `.env` files and files over 20 MB; CI runs Gitleaks, CodeQL, Bandit, pip-audit and OWASP ZAP.
 
 ## 5. Open items

@@ -33,7 +33,7 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 
 - Early detection of temperature excursions, cooling failures, and sensor dropouts across multiple sites.
 - Fewer false alarms through causal rolling features and alert debouncing.
-- A calm, dark-mode control-room dashboard served directly by FastAPI.
+- A clean, mobile-ready operations console served directly by FastAPI.
 - Tamper-evident evidence trails for quality reviewers and compliance auditors.
 - A serverless, free-tier-first Google Cloud foundation, defined in Terraform and deployed through keyless CI/CD.
 
@@ -341,6 +341,11 @@ Dataset: **`coldtrace_warehouse`** (`coldtrace_warehouse.telemetry_2022_2026`, `
 | `USE_FIRESTORE` | Optional | Enables Firestore persistence for alert state when configured |
 | `NIM_MODEL` / `NIM_TIMEOUT` | Optional | Overrides default NVIDIA NIM model ID or request timeout |
 | `MODEL_PATH` | Optional | Path to the trained Random Forest model artifact |
+| `THRESHOLDS_PATH` | Optional | Versioned thresholds file (default `config/thresholds.json`) |
+| `USE_BIGQUERY` | Optional | Streams telemetry and case events to BigQuery |
+| `PUBSUB_TOPIC` / `PUBSUB_PUSH_TOKEN` | Optional | Pub/Sub topic for event publishing; token required on `POST /pubsub/push` |
+| `SYNTHETIC_CASE_BACKFILL` / `BACKFILL_DAYS` | Optional | Seeds flagged synthetic historical cases for Insights (default on, 60 days) |
+| `EVIDENCE_HMAC_KEY` | Optional | Adds an HMAC over evidence seals |
 
 ---
 
