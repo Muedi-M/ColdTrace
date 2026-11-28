@@ -251,10 +251,18 @@ def _load_csv_telemetry() -> dict[str, list[dict]]:
             })
     return grouped
 
-_csv_cache = _load_csv_telemetry()
+import time
+
+_csv_cache: dict[str, list[dict]] | None = None
+
+def _get_csv_cache() -> dict[str, list[dict]]:
+    global _csv_cache
+    if _csv_cache is None:
+        _csv_cache = _load_csv_telemetry()
+    return _csv_cache
 
 def _tail_series(loc: str, n: int = 14) -> list[float]:
-    rows = _csv_cache.get(loc, [])
+    rows = _get_csv_cache().get(loc, [])
     if not rows:
         return [1.2, 1.4, 1.3, 1.6, 2.1, 4.5, 6.1]
     # Sample 14 points across the last 7 days (336 x 30-min intervals)
@@ -337,11 +345,19 @@ def _evaluate_batch_status(batch: dict, temp_val: float) -> str:
         return "Monitoring"
     return "In range"
 
-def _sync_csv_and_alerts_to_ui():
+_ui_sync_ts = 0.0
+_UI_SYNC_TTL_SEC = 5.0
+
+def _sync_csv_and_alerts_to_ui(force: bool = False):
+    global _ui_sync_ts
+    now = time.monotonic()
+    if not force and (now - _ui_sync_ts) < _UI_SYNC_TTL_SEC:
+        return
     # Populate latest readings & 7-day series from cold_chain_labeled_2022_2026.csv
+    csv_data = _get_csv_cache()
     for u in _ui_store["units"]:
         loc = u["locationId"]
-        rows = _csv_cache.get(loc, [])
+        rows = csv_data.get(loc, [])
         if rows:
             u["temp"] = round(rows[-1]["T"], 1)
             u["series"] = _tail_series(loc)
@@ -376,7 +392,7 @@ def _sync_csv_and_alerts_to_ui():
 
 @app.get("/api/ui/state")
 def get_video_ui_state():
-    _sync_csv_and_alerts_to_ui()
+    _ui_sync_ts = time.monotonic()
     return _ui_store
 
 @app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
@@ -386,7 +402,7 @@ def replay_labeled_csv():
         raise HTTPException(404, "Dataset CSV not found in Backend/data/")
     # Replay the tail 300 rows per site (covers 24h warm-up + recent labeled anomalies)
     count = 0
-    for loc, rows in _csv_cache.items():
+    for loc, rows in _get_csv_cache().items():
         for r in rows[-300:]:
             ev = {"location_id": loc, "ts": r["ts"], "T": r["T"], "H": r["H"], "C": r["C"], "S": r["S"]}
             det = detector().ingest(ev)
