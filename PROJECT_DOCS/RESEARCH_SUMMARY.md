@@ -22,6 +22,12 @@ Muedi Mbambala (AI Research Foundations, lead) · Chantell Masilela (Cloud Data 
 | The standard already demands what ColdTrace does | SA National Department of Health SOPs require continuous temperature monitoring connected to an alarm/warning system and records of every excursion and action taken | [NDoH SOP: routine monitoring of vaccine handling](https://knowledgehub.health.gov.za/system/files/elibdownloads/2022-01/SOP_Routine%20Monitoring%20of%20Vaccine%20Handling_%2020122021.pdf) |
 | Too many alarms means none are acted on | A health system's environmental monitoring produced about **11,000 excursion alerts a month, of which only 22 % were addressed** | [Rutgers dissertation on temperature-monitoring alarm fatigue](https://rucore.libraries.rutgers.edu/rutgers-lib/65271/) |
 
+**Representative persona scenarios** (illustrative, composed from the evidence above; not interview transcripts):
+
+1. **Manual logging & overnight blind spots** — “Between morning patient queues and stock counts, writing down fridge temperatures on paper twice a day feels like a tick-box exercise—if the temperature spikes at 2 AM, nobody knows until 7 AM.” (*Clinic Sister, primary healthcare*)
+2. **Alarm fatigue from routine door openings** — “When the fridge beeps every time someone opens the door to grab vials, staff start ignoring it. By the time we realize it's an actual cooling failure, we're scrambling to move stock.” (*Dispensary Pharmacist*)
+3. **Power fluctuations & quarantine uncertainty** — “During power fluctuations or sensor dropouts, our biggest stress is not knowing how long the unit stayed above 8°C—we either risk wasting good vials or second-guess whether a batch needs to be quarantined.” (*Cold-Chain Logistics Coordinator*)
+
 **Problem statement.** Cold-chain failures (temperature excursions, compressor/cooling failures and frozen sensors) are discovered late, often after product is lost, because monitoring systems either miss slow failures or raise so many false alarms that people stop reacting, and because the path from alert to a reviewed, closed case is not recorded. ColdTrace's goal is to **shorten the time from failure to a human decision** while keeping false alerts low enough to be trusted, and to **make every handoff provable**.
 
 **User evidence status.** Field interviews are in progress; the guide, survey and evidence log are in [`USER_RESEARCH.md`](USER_RESEARCH.md). The pain points above are hypotheses from desk research until confirmed there.

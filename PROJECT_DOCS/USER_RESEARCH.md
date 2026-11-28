@@ -3,6 +3,16 @@
 Purpose: replace assumptions about the operations lead with evidence. Record only real
 conversations. If an interview did not happen, the row stays empty.
 
+## Representative persona scenarios (submitted with the capstone)
+
+Composed by the team from the cited evidence (WHO, SA NDoH SOP, alarm-fatigue studies) to describe the users ColdTrace serves. They are illustrative personas, **not** verbatim interview quotes; the evidence log below records real interviews only.
+
+| # | Pain point | Persona | Scenario |
+|---|---|---|---|
+| 1 | Manual logging & overnight blind spots | Clinic Sister, primary healthcare | “Between morning patient queues and stock counts, writing down fridge temperatures on paper twice a day feels like a tick-box exercise—if the temperature spikes at 2 AM, nobody knows until 7 AM.” |
+| 2 | Alarm fatigue from routine door openings | Dispensary Pharmacist | “When the fridge beeps every time someone opens the door to grab vials, staff start ignoring it. By the time we realize it's an actual cooling failure, we're scrambling to move stock.” |
+| 3 | Power fluctuations & quarantine uncertainty | Cold-Chain Logistics Coordinator | “During power fluctuations or sensor dropouts, our biggest stress is not knowing how long the unit stayed above 8°C—we either risk wasting good vials or second-guess whether a batch needs to be quarantined.” |
+
 ## Who to talk to (aim: 3 interviews + 10 survey responses after BUILD)
 
 | Segment | Example roles | Where to find them |

@@ -84,7 +84,15 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 
 ### 1.2 Friction Points & Console Mapping
 
-The friction points follow from the evidence in §1.1; they remain working hypotheses until confirmed by operator interviews ([PROJECT_DOCS/USER_RESEARCH.md](PROJECT_DOCS/USER_RESEARCH.md)).
+**User pain points — representative healthcare persona scenarios**
+
+| # | Pain point | Persona voice | How ColdTrace responds |
+|---|---|---|---|
+| 1 | **Manual logging & overnight blind spots** | “Between morning patient queues and stock counts, writing down fridge temperatures on paper twice a day feels like a tick-box exercise—if the temperature spikes at 2 AM, nobody knows until 7 AM.” — *Clinic Sister, primary healthcare (persona)* | 30-minute telemetry and alerts at any hour; no paper log |
+| 2 | **Alarm fatigue from routine door openings** | “When the fridge beeps every time someone opens the door to grab vials, staff start ignoring it. By the time we realize it's an actual cooling failure, we're scrambling to move stock.” — *Dispensary Pharmacist (persona)* | Debounced alerts (2 consecutive readings) and a separate COOLING_FAILURE signature, so a door blip is not a failure |
+| 3 | **Power fluctuations & quarantine uncertainty** | “During power fluctuations or sensor dropouts, our biggest stress is not knowing how long the unit stayed above 8°C—we either risk wasting good vials or second-guess whether a batch needs to be quarantined.” — *Cold-Chain Logistics Coordinator (persona)* | SENSOR_DROPOUT detection, time out of band per batch, sealed evidence and held shipments for a clear quarantine decision |
+
+*Representative persona scenarios composed by the team from the evidence in §1.1 — illustrative, not verbatim interview quotes.* Interview guide and evidence log: [PROJECT_DOCS/USER_RESEARCH.md](PROJECT_DOCS/USER_RESEARCH.md).
 
 | Friction Point | Operational Impact | ColdTrace Capability |
 |---|---|---|

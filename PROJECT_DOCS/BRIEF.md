@@ -12,6 +12,8 @@ Monitoring alone does not fix this. When data exists, it often goes unreviewed �
 
 **Who we serve.** The operations lead at a regional distribution centre (Johannesburg, Durban, Cape Town) who watches several units and needs to know, at a glance, which unit is failing and which batches are at risk *now*. The QA reviewer who must confirm or dismiss the exception and release or destroy stock, and the auditor who later checks the record, use the same case.
 
+**Persona scenarios** (representative, composed from the evidence above): a *clinic sister* logs fridge temperatures on paper twice a day — “if the temperature spikes at 2 AM, nobody knows until 7 AM”; a *dispensary pharmacist* says staff ignore a fridge that beeps at every door opening until a real cooling failure has them “scrambling to move stock”; a *cold-chain logistics coordinator* cannot tell “how long the unit stayed above 8 °C” after a power fluctuation, so good vials are wasted or a batch is wrongly released.
+
 **Friction points.** (1) Failures are found late. (2) Slow and silent failures never trip a threshold. (3) Alarm fatigue. (4) Nobody knows which batches and shipments are affected. (5) Ownership of an alert is unclear. (6) Proving what happened takes days.
 
 ## 2. The solution
