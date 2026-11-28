@@ -296,7 +296,7 @@
           <div class="banner-top">
             <div>
               <div class="action-label">⚠️ Action required</div>
-              <p class="banner-headline" id="bannerHeadline">Batches 7F-442, 8A-118, 9C-301 exceeded temperature threshold</p>
+              <p class="banner-headline" id="bannerHeadline">Batches 7F-442, 8A-118, 9C-301 are outside their temperature band</p>
             </div>
             <div class="temp-pill-box">
               <div class="temp-pill-val mono" id="bannerPeak">🌡 8.4°C</div>
@@ -411,7 +411,7 @@
         <div class="card">
           <div class="sec-head">
             <h2>Model Benchmark (2022–2026 Synthetic Dataset)</h2>
-            <span class="badge neutral">283 labeled events</span>
+            <span class="badge neutral">Event-level test set • 283 labelled events</span>
           </div>
           <table>
             <thead>
@@ -423,6 +423,7 @@
               <tr style="background:var(--blue-bg); font-weight:700;"><td>Random Forest (Active)</td><td class="mono" style="color:var(--blue);">0.810</td><td class="mono" style="color:var(--green);">94.3%</td><td class="mono">0.5 h</td><td class="mono">0.106</td></tr>
             </tbody>
           </table>
+          <p style="font-size:12px; color:var(--muted); margin:10px 0 0;">Macro-F1 above is on the time-ordered event-level test set (n = 283). On the balanced 120-window sample (30 per class) used in the deck and README, Random Forest scores 0.918 vs 0.626 for SOP rules.</p>
         </div>
 
         <div class="card">
