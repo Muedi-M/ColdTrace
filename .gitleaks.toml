@@ -1,8 +1,9 @@
-# Default Gitleaks rules, plus one documented exception (see SECURITY.md §4):
-# commit cdb6b74 (19 Nov 2026) added an NVIDIA key to env.example; the key was revoked on 28 Nov 2026.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Historical env.example NVIDIA key in cdb6b74, revoked 2026-11-28"
-commits = ["cdb6b741c1b47275ae1caf9e6c538458f758c147"]
+description = "Historical false positives / revoked keys: cdb6b74 env.example NVIDIA key (revoked 2026-11-28); c790032 test_core.py dummy test key"
+commits = [
+  "cdb6b741c1b47275ae1caf9e6c538458f758c147",
+  "c790032b20685bdd1147aa833ab6009553c0ed20",
+]
