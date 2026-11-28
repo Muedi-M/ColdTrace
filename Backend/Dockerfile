@@ -19,6 +19,7 @@ COPY coldtrace ./coldtrace
 COPY frontend ./frontend
 COPY artifacts ./artifacts
 COPY data ./data
+COPY config ./config
 
 RUN chown -R appuser:appgroup /app
 USER 10001
