@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-11-25T16:16:46+00:00",
+  "thresholds_version": "2026.11.2",
+  "thresholds_sha256": "817509d96248c5532b5b286047e93eb98d817c3a1b492363d3315a31fb84e4a6",
+  "rows_in": 254160,
+  "rows_clean": 254160,
+  "rows_quarantined": 0,
+  "quarantine_by_reason": {},
+  "locations": {
+    "CPT-DC03": {
+      "rows": 84720,
+      "first": "2022-01-01T00:00:00",
+      "last": "2026-10-31T23:30:00",
+      "expected_rows": 84720,
+      "missing_readings": 0,
+      "completeness_pct": 100.0,
+      "max_gap_minutes": 30,
+      "flat_runs_ge_3": 360,
+      "labelled_exception_rows": {
+        "SENSOR_DROPOUT": 3494,
+        "COOLING_FAILURE": 1444,
+        "TEMP_EXCURSION": 914
+      }
+    },
+    "DBN-DC02": {
+      "rows": 84720,
+      "first": "2022-01-01T00:00:00",
+      "last": "2026-10-31T23:30:00",
+      "expected_rows": 84720,
+      "missing_readings": 0,
+      "completeness_pct": 100.0,
+      "max_gap_minutes": 30,
+      "flat_runs_ge_3": 331,
+      "labelled_exception_rows": {
+        "SENSOR_DROPOUT": 3156,
+        "COOLING_FAILURE": 1523,
+        "TEMP_EXCURSION": 1369
+      }
+    },
+    "JHB-DC01": {
+      "rows": 84720,
+      "first": "2022-01-01T00:00:00",
+      "last": "2026-10-31T23:30:00",
+      "expected_rows": 84720,
+      "missing_readings": 0,
+      "completeness_pct": 100.0,
+      "max_gap_minutes": 30,
+      "flat_runs_ge_3": 339,
+      "labelled_exception_rows": {
+        "SENSOR_DROPOUT": 3293,
+        "COOLING_FAILURE": 1295,
+        "TEMP_EXCURSION": 976
+      }
+    }
+  },
+  "reference_integrity": {
+    "thresholds_version": "2026.11.2",
+    "locations": 3,
+    "batches": 5,
+    "shipments": 5,
+    "ok": true,
+    "problems": []
+  }
+}

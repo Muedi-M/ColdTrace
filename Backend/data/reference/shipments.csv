@@ -1,0 +1,6 @@
+shipment_id,batch_code,destination,shipment_status,planned_departure
+SH-7713,7F-442,Waterfall Corner locker,Held,2026-10-29 08:00
+SH-7712,8A-118,Durban North depot,Held,2026-10-28 14:00
+SH-7769,9C-301,Cape Town Harbour pick-up,Held,2026-10-28 09:00
+SH-7755,7F-451,Waterfall Corner locker,Scheduled,2026-11-27 07:00
+SH-7724,7F-558,Midrand Hub,Scheduled,2026-11-27 09:30

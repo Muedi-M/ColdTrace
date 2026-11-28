@@ -1,0 +1,4 @@
+location_id,city,site_name,unit_name,sensor_cadence_min
+JHB-DC01,Johannesburg,Johannesburg DC • Waterfall,Unit 12,30
+DBN-DC02,Durban,Durban DC • Durban North,Unit 14,30
+CPT-DC03,Cape Town,Cape Town DC • Cape Town Harbour,Unit 22,30
