@@ -15,7 +15,7 @@ Markdown
 - **Live Console:** <https://coldtrace-app-644777661209.us-central1.run.app>
 - **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)
 - **Presentation Deck (8 slides):** `PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx`
-- **Recorded Walkthrough (≤ 5 min):** *Add walkthrough link before final submission*
+- **Recorded Walkthrough (≤ 5 min):** (https://drive.google.com/file/d/1iflIPeFDiDTi-kW6cpJSzHZdk1qhVrG0/view?usp=sharing)
 - **License:** MIT License (see [18. License](#18-license))
 
 ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures, and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
