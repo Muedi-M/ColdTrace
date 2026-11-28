@@ -34,6 +34,10 @@
     * { box-sizing: border-box; font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }
     body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; }
     .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    .hash { overflow-wrap: anywhere; word-break: break-all; }
+    .home-grid > *, .row-main { min-width: 0; }
+    .link-btn { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+    .link-btn:hover { color: var(--orange); }
 
     /* Responsive Layout Shell */
     .layout { display: flex; min-height: 100vh; max-width: 1320px; margin: 0 auto; }
@@ -307,7 +311,7 @@
           <div class="card">
             <div class="sec-head">
               <h2>Today's tasks</h2>
-              <span class="sec-meta" id="tasksRemaining">4 remaining ›</span>
+              <button type="button" class="sec-meta link-btn" id="tasksRemaining" onclick="switchTab('investigations')">4 remaining ›</button>
             </div>
             <div id="tasksList"></div>
           </div>
@@ -315,7 +319,7 @@
           <div>
             <div class="sec-head">
               <h2>Affected batches</h2>
-              <span class="sec-meta" id="affectedCount">3 of 5 ›</span>
+              <button type="button" class="sec-meta link-btn" id="affectedCount" onclick="openFlaggedBatches()">3 of 5 ›</button>
             </div>
             <div id="homeBatchesList"></div>
           </div>
@@ -330,7 +334,7 @@
         <div class="card">
           <div class="sec-head">
             <span style="font-weight:700; font-size:15px;">All batches</span>
-            <span style="font-size:12px; color:var(--muted);">☰ Filter</span>
+            <button type="button" class="link-btn" style="font-size:12px; color:var(--muted);" onclick="cycleBatchFilter()" aria-label="Cycle batch filter">☰ Filter</button>
           </div>
           <div class="seg-bar">
             <button class="seg-btn active" onclick="setBatchFilter('ALL', this)">All</button>
@@ -369,26 +373,26 @@
 
         <div class="kpi-4" style="grid-template-columns: repeat(3, 1fr); margin-bottom:16px;">
           <div class="card" style="margin:0; padding:14px;"><div class="lbl" style="color:var(--orange);">! Open</div><div class="num mono" id="invOpenCount">3</div><div class="lbl">active cases</div></div>
-          <div class="card" style="margin:0; padding:14px;"><div class="lbl" style="color:var(--blue);">👥 Assigned</div><div class="num mono">3</div><div class="lbl">team leads</div></div>
-          <div class="card" style="margin:0; padding:14px;"><div class="lbl">🕒 Avg. close</div><div class="num mono">1h 42m</div><div class="lbl">resolution</div></div>
+          <div class="card" style="margin:0; padding:14px;"><div class="lbl" style="color:var(--blue);">👥 Assigned</div><div class="num mono" id="invAssignedCount">–</div><div class="lbl">open cases with an owner</div></div>
+          <div class="card" style="margin:0; padding:14px;"><div class="lbl">🕒 Cycle time</div><div class="num mono" id="invAvgClose">–</div><div class="lbl" id="invAvgCloseLbl">median, last 30 days</div></div>
         </div>
 
         <div class="card">
           <div class="sec-head">
             <span style="font-weight:700; font-size:15px;">Investigation progress</span>
-            <span class="sec-meta">This week</span>
+            <span class="sec-meta">Console cases</span>
           </div>
           <div class="prog-bar">
-            <div class="prog-seg" style="width:28%; background:var(--orange);"></div>
-            <div class="prog-seg" style="width:26%; background:var(--blue);"></div>
-            <div class="prog-seg" style="width:24%; background:#93C5FD;"></div>
-            <div class="prog-seg" style="width:22%; background:#CBD5E1;"></div>
+            <div class="prog-seg" id="progOpen" style="width:25%; background:var(--orange);"></div>
+            <div class="prog-seg" id="progProgress" style="width:25%; background:var(--blue);"></div>
+            <div class="prog-seg" id="progReview" style="width:25%; background:#93C5FD;"></div>
+            <div class="prog-seg" id="progClosed" style="width:25%; background:#CBD5E1;"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); flex-wrap:wrap; gap:6px;">
-            <span><b style="color:var(--orange);">●</b> Open 1</span>
-            <span><b style="color:var(--blue);">●</b> In progress 1</span>
-            <span><b style="color:#93C5FD;">●</b> Under review 1</span>
-            <span><b style="color:#94A3B8;">●</b> Closed 1</span>
+            <span><b style="color:var(--orange);">●</b> <span id="progOpenLbl">Open</span></span>
+            <span><b style="color:var(--blue);">●</b> <span id="progProgressLbl">In progress</span></span>
+            <span><b style="color:#93C5FD;">●</b> <span id="progReviewLbl">Under review</span></span>
+            <span><b style="color:#94A3B8;">●</b> <span id="progClosedLbl">Closed</span></span>
           </div>
         </div>
 
@@ -419,6 +423,14 @@
               <tr style="background:var(--blue-bg); font-weight:700;"><td>Random Forest (Active)</td><td class="mono" style="color:var(--blue);">0.810</td><td class="mono" style="color:var(--green);">94.3%</td><td class="mono">0.5 h</td><td class="mono">0.106</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="card">
+          <div class="sec-head">
+            <h2>Operations Insights</h2>
+            <span class="sec-meta" id="insightsMeta">Loading…</span>
+          </div>
+          <div id="insightsPanel"></div>
         </div>
 
         <div class="card">

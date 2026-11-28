@@ -1,0 +1,6 @@
+batch_code,location_id,category,product,units,arrived,sensor_id,last_temp_c,peak_temp_c,investigation_id
+7F-442,JHB-DC01,Pharmaceuticals,Insulin pens,4,2026-10-28 00:30,JHB-S2,11.2,11.2,INV-2048
+8A-118,DBN-DC02,Biologics,Flu vaccine vials,5,2026-10-27 12:30,DBN-S1,9.8,9.8,INV-2047
+9C-301,CPT-DC03,Pharmaceuticals,Eye drops,3,2026-10-26 17:30,CPT-S2,1.2,1.2,INV-2046
+7F-451,JHB-DC01,Seafood,Hake fillets,9,2026-10-26 20:30,JHB-S1,1.5,1.8,
+7F-558,DBN-DC02,Bakery,Baked cheesecake,4,2026-10-25 16:30,DBN-S3,1.0,1.4,

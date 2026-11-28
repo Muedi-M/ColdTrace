@@ -136,8 +136,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          min_instances: "0"
-          max_instances: "1"
+          flags: "--min-instances=0 --max-instances=1"
 
   dast-baseline:
     needs: deploy

@@ -1,0 +1,68 @@
+{
+  "repo": "Muedi-M/ColdTrace",
+  "base_branch": "main",
+  "members": {
+    "muedi": {
+      "name": "Muedi Mbambala",
+      "lane": "ai",
+      "github": "Muedi-M"
+    },
+    "chantell": {
+      "name": "Chantell Masilela",
+      "lane": "data",
+      "github": "ntokozochantell396-lab"
+    },
+    "moorthy": {
+      "name": "Moorthy R",
+      "lane": "cloud",
+      "github": "MOORTHYrm"
+    },
+    "peter": {
+      "name": "Peter Opiyo",
+      "lane": "security",
+      "github": "PeterOpiyo240"
+    }
+  },
+  "lanes": {
+    "ai": [
+      "Backend/coldtrace/model.py",
+      "Backend/coldtrace/features.py",
+      "Backend/coldtrace/rules.py",
+      "Backend/coldtrace/evaluate.py",
+      "Backend/coldtrace/nim.py",
+      "Backend/coldtrace/cases.py",
+      "Backend/scripts/train_eval.py",
+      "Backend/scripts/compare_nim.py",
+      "Backend/scripts/generate_data.py",
+      "Backend/artifacts/*",
+      "docs/RESEARCH_SUMMARY.md"
+    ],
+    "data": [
+      "Backend/coldtrace/validation.py",
+      "Backend/coldtrace/thresholds.py",
+      "Backend/config/*",
+      "Backend/data/*",
+      "Backend/data/reference/*"
+    ],
+    "cloud": [
+      "terraform/*",
+      ".github/workflows/*",
+      "Backend/Dockerfile",
+      "Backend/coldtrace/pubsub.py",
+      "Backend/coldtrace/storage.py",
+      "Backend/coldtrace/api.py",
+      "Backend/frontend/*",
+      "Backend/requirements.txt"
+    ],
+    "security": [
+      "Backend/coldtrace/security.py",
+      "Backend/tests/test_security.py",
+      "SECURITY.md"
+    ],
+    "docs": [
+      "README.md",
+      "docs/*",
+      "Backend/README.md"
+    ]
+  }
+}

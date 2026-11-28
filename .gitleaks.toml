@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Historical false positives / revoked keys: cdb6b74 env.example NVIDIA key (revoked 2026-11-28); c790032 test_core.py dummy test key"
+commits = [
+  "cdb6b741c1b47275ae1caf9e6c538458f758c147",
+  "c790032b20685bdd1147aa833ab6009553c0ed20",
+]

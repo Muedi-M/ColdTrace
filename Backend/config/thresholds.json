@@ -1,0 +1,49 @@
+{
+  "version": "2026.11.2",
+  "status": "proposed",
+  "owner": "data-validation lane",
+  "reviewed_by": [],
+  "reviewed_at": null,
+  "notes": "Change a value only through a pull request that bumps `version`, appends to `history` and adds reviewer names. The API exposes this file and its SHA-256 at GET /api/thresholds so every alert can be traced to the threshold version that produced it.",
+  "bands": {
+    "pharma": {
+      "label": "Pharmaceuticals, biologics, vaccines",
+      "min_c": 2.0,
+      "max_c": 8.0,
+      "match": ["pharma", "biologic", "vaccine", "insulin"]
+    },
+    "chilled_food": {
+      "label": "Chilled food (seafood, dairy, bakery)",
+      "min_c": null,
+      "max_c": 2.0,
+      "match": []
+    }
+  },
+  "detector": {
+    "temp_limit_c": 8.0,
+    "sensor_floor_pct": 60.0,
+    "flat_steps": 3,
+    "cooling_low_pct": 45.0,
+    "warming_c": 1.0
+  },
+  "validation": {
+    "cadence_minutes": 30,
+    "flat_eps_c": 0.02,
+    "flat_run_flag_steps": 3,
+    "ranges": {
+      "Warehouse_Temperature_C": [-30.0, 60.0],
+      "Warehouse_Humidity_Percent": [0.0, 100.0],
+      "Cooling_Load_Percent": [0.0, 100.0],
+      "Sensor_Connectivity": [0.0, 100.0]
+    }
+  },
+  "sla": {
+    "review_due_hours": {"High": 4, "Medium": 12, "Low": 24},
+    "close_due_hours": {"High": 24, "Medium": 48, "Low": 72}
+  },
+  "history": [
+    {"version": "2026.11.0", "date": "2026-11-10", "change": "Initial SOP band: alert when temperature > 8 °C; sensor floor 60 %; 3-step flat run."},
+    {"version": "2026.11.1", "date": "2026-11-24", "change": "Category bands: pharma 2–8 °C (low and high excursions), chilled food ≤ 2 °C."},
+    {"version": "2026.11.2", "date": "2026-11-25", "change": "Moved all thresholds, validation ranges and review/close SLAs into this versioned file."}
+  ]
+}

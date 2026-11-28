@@ -8,11 +8,16 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-TEMP_LIMIT_C = 8.0
-SENSOR_FLOOR = 60.0
-FLAT_STEPS = 3
-COOLING_LOW = 45.0
-WARMING_C = 1.0
+from . import thresholds as TH
+
+# Values live in config/thresholds.json (versioned, reviewed); same numbers as the original SOP baseline.
+_D = TH.load()["detector"]
+TEMP_LIMIT_C = float(_D["temp_limit_c"])
+SENSOR_FLOOR = float(_D["sensor_floor_pct"])
+FLAT_STEPS = int(_D["flat_steps"])
+COOLING_LOW = float(_D["cooling_low_pct"])
+WARMING_C = float(_D["warming_c"])
+THRESHOLDS_VERSION = TH.load()["version"]
 
 
 def rule_predict(f: pd.DataFrame) -> np.ndarray:

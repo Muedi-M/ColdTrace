@@ -88,7 +88,27 @@ const STAFF = [
         if (b) b.classList.toggle('active', t === tab);
         if (sb) sb.classList.toggle('active', t === tab);
       });
+      routeTo('#' + tab);
+      if (tab === 'quality') loadInsights();
     }
+
+    // Shareable URLs + working Back button: #home, #batches, #investigations, #quality,
+    // #batch/<code>, #inv/<id>. pushState adds history entries; popstate replays them.
+    let routing = false;
+    function routeTo(hash) {
+      if (routing || window.location.hash === hash) return;
+      try { history.pushState({ hash }, '', hash); } catch (_) {}
+    }
+    function applyRoute() {
+      const h = (window.location.hash || '#home').slice(1);
+      routing = true;
+      try {
+        if (h.startsWith('batch/')) openBatchDetail(decodeURIComponent(h.slice(6)));
+        else if (h.startsWith('inv/')) openInvestigationDetail(decodeURIComponent(h.slice(4)));
+        else if (['home', 'batches', 'investigations', 'quality'].includes(h)) switchTab(h);
+      } finally { routing = false; }
+    }
+    window.addEventListener('popstate', applyRoute);
 
     function goBackFromDetail() {
       switchTab(prevTab === 'batches' ? 'batches' : 'home');
@@ -152,6 +172,7 @@ const STAFF = [
         renderBatches();
         renderInvestigations();
         renderQualityAndVault();
+        if (!refreshAll._routed) { refreshAll._routed = true; if (window.location.hash) applyRoute(); }
         if (selectedInvId && document.getElementById('screen-inv-detail').style.display === 'block') {
           openInvestigationDetail(selectedInvId);
         }
@@ -556,11 +577,23 @@ function renderBatches() {
       `;
       ['home', 'batches', 'investigations', 'quality', 'inv-detail'].forEach(s => document.getElementById('screen-' + s).style.display = 'none');
       document.getElementById('screen-batch-detail').style.display = 'block';
+      routeTo('#batch/' + encodeURIComponent(b.code));
     }
 
     function renderInvestigations() {
       const vis = appData.investigations.filter(matchesSearch);
-      document.getElementById('invOpenCount').innerText = vis.filter(i => i.state !== 'Closed').length;
+      const openInv = vis.filter(i => i.state !== 'Closed');
+      document.getElementById('invOpenCount').innerText = openInv.length;
+      const assignedEl = document.getElementById('invAssignedCount');
+      if (assignedEl) assignedEl.innerText = openInv.filter(i => i.assignee && i.assignee !== 'Unassigned').length;
+      const byState = s => vis.filter(i => i.state === s).length;
+      const counts = { 'Open': byState('Open'), 'In progress': byState('In progress'), 'Under review': byState('Under review'), 'Closed': byState('Closed') };
+      const total = Math.max(1, vis.length);
+      [['Open', 'progOpen'], ['In progress', 'progProgress'], ['Under review', 'progReview'], ['Closed', 'progClosed']].forEach(([st, id]) => {
+        const seg = document.getElementById(id); if (seg) seg.style.width = (100 * counts[st] / total) + '%';
+        const lbl = document.getElementById(id + 'Lbl'); if (lbl) lbl.innerText = `${st} ${counts[st]}`;
+      });
+      loadInsights();
       document.getElementById('invIncidentCount').innerText = `${vis.length} incidents`;
       document.getElementById('investigationsList').innerHTML = vis.map(inv => `
         <div class="card interactive" style="padding:16px;" onclick="openInvestigationDetail('${inv.id}')">
@@ -575,7 +608,7 @@ function renderBatches() {
             </div>
             <div style="text-align:right;">
               <span class="badge ${inv.state === 'Closed' ? 'ok' : (inv.priority === 'High' ? 'high' : 'medium')}">${inv.state === 'Closed' ? 'Closed' : inv.priority + ' ›'}</span>
-              <div style="font-size:11.5px; color:var(--muted); margin-top:6px;">${inv.age}</div>
+              <div style="font-size:11.5px; color:var(--muted); margin-top:6px;" ${inv.createdAt ? `data-ts="${escapeHtml(inv.createdAt)}"` : ''}>${escapeHtml(inv.age)}</div>
             </div>
           </div>
         </div>
@@ -588,7 +621,11 @@ function renderBatches() {
           <div class="row-icon info">🔐</div>
           <div class="row-main">
             <div class="row-title">${inv.id} • ${inv.batchCode} (${inv.unitName})</div>
-            <div class="row-sub mono">SHA-256: ${inv.sha256}</div>
+            <div class="row-sub mono hash">SHA-256: ${escapeHtml(inv.sha256)}</div>
+            <div style="display:flex; gap:10px; align-items:center; margin-top:6px; font-size:12px;">
+              <button type="button" class="btn-reset-filter" onclick="event.stopPropagation(); verifyCase('${inv.id}', this)">Verify audit chain</button>
+              <a href="/api/cases/${encodeURIComponent(inv.id)}/events" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--orange); font-weight:600; text-decoration:none;">Event log (JSON)</a>
+            </div>
           </div>
           <span class="badge ok">✓ Sealed</span>
         </div>
@@ -635,7 +672,7 @@ function renderBatches() {
             </div>
             ${invSubTab === 'Timeline' ? timelineHTML : ''}
             ${invSubTab === 'Details' ? `<div style="font-size:13px; line-height:1.7;">
-              <div><strong>Evidence SHA-256:</strong> <span class="mono">${inv.sha256}</span></div>
+              <div><strong>Evidence SHA-256:</strong> <span class="mono hash">${escapeHtml(inv.sha256)}</span></div>
               <div><strong>Assigned Owner:</strong> ${inv.assignee}</div>
               <div><strong>Linked Shipment:</strong> ${inv.shipmentId} (${inv.state === 'Closed' ? 'Released' : 'On hold'})</div>
             </div>` : ''}
@@ -650,8 +687,8 @@ function renderBatches() {
             </div>
             <div style="font-size:12px; color:var(--muted); margin-top:3px;">Grounded triage agent for ${inv.id}</div>
             <div class="ai-chips">
-              <span class="ai-chip">📦 1 flagged batch</span>
-              <span class="ai-chip">🚚 1 held shipment</span>
+              <span class="ai-chip" data-case-chip>📦 ${appData.batches.filter(b => b.invId === inv.id && b.status === 'Out of range').length} flagged batch(es)</span>
+              <span class="ai-chip" data-case-chip>🚚 ${appData.batches.filter(b => b.invId === inv.id && b.held).length} held shipment(s)</span>
               <span class="ai-chip">🤝 ${inv.handoffs} handoffs</span>
             </div>
             <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">AI-generated summary grounded in sealed sensor evidence. Human review required before closing.</div>
@@ -661,6 +698,8 @@ function renderBatches() {
       `;
       ['home', 'batches', 'investigations', 'quality', 'batch-detail'].forEach(s => document.getElementById('screen-' + s).style.display = 'none');
       document.getElementById('screen-inv-detail').style.display = 'block';
+      ['home', 'batches', 'investigations', 'quality'].forEach(t => { const sb = document.getElementById('snav-' + t); if (sb) sb.classList.toggle('active', t === 'investigations'); });
+      routeTo('#inv/' + encodeURIComponent(inv.id));
     }
 
     async function resolveCase(invId) {
@@ -829,7 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-function applyAuditV3FinalPolish() {
+function enhanceAccessibility() {
   const modal = document.getElementById('assignModal') || document.querySelector('[data-assign-modal], .assign-modal');
   const rows = document.querySelectorAll('.staff-row, [data-staff-row]');
   rows.forEach((row, idx) => {
@@ -873,34 +912,6 @@ function applyAuditV3FinalPolish() {
     }
   });
 
-  const vault = document.getElementById('evidenceVaultList');
-  if (vault) {
-    vault.querySelectorAll('.card, .list-row, [data-evidence-item]').forEach(item => {
-      if (item.dataset.vaultEnhanced) return;
-      item.dataset.vaultEnhanced = '1';
-      const shaEl = item.querySelector('.mono');
-      const shaText = (shaEl ? shaEl.textContent : '').trim();
-      const bar = document.createElement('div');
-      bar.style.cssText = 'display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px; font-size:12px;';
-      const safeHash = escapeHtml(shaText || 'evidence-manifest.json');
-      const verifyBtn = document.createElement('button');
-      verifyBtn.type = 'button';
-      verifyBtn.className = 'btn-reset-filter';
-      verifyBtn.textContent = 'Verify hash';
-      verifyBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        verifyBtn.textContent = shaText ? 'Verified ✓' : 'No hash';
-      });
-      const link = document.createElement('a');
-      link.href = `#evidence-${encodeURIComponent(safeHash.slice(0, 12) || 'item')}`;
-      link.textContent = 'View artifact';
-      link.style.cssText = 'color:var(--orange, #EA580C); font-weight:600; text-decoration:none;';
-      bar.appendChild(verifyBtn);
-      bar.appendChild(link);
-      const targetContainer = item.querySelector('.row-main') || item;
-      targetContainer.appendChild(bar);
-    });
-  }
 }
 
 if (typeof window !== 'undefined') {
@@ -908,33 +919,83 @@ if (typeof window !== 'undefined') {
   if (typeof origOpenAssign === 'function' && !origOpenAssign._v3Wrapped) {
     const wrapped = function(...args) {
       const res = origOpenAssign.apply(this, args);
-      setTimeout(applyAuditV3FinalPolish, 0);
+      setTimeout(enhanceAccessibility, 0);
       return res;
     };
     wrapped._v3Wrapped = true;
     window.openAssignModal = wrapped;
   }
 
-  const origSwitchTab = window.switchTab;
-  if (typeof origSwitchTab === 'function' && !origSwitchTab._v3Wrapped) {
-    const wrappedTab = function(tabName, ...rest) {
-      const res = origSwitchTab.apply(this, [tabName, ...rest]);
-      if (tabName && window.location.hash !== '#' + tabName) {
-        try { history.replaceState(null, '', '#' + tabName); } catch (_) {}
-      }
-      setTimeout(applyAuditV3FinalPolish, 0);
-      return res;
-    };
-    wrappedTab._v3Wrapped = true;
-    window.switchTab = wrappedTab;
-  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(enhanceAccessibility, 50));
+}
 
-  window.addEventListener('hashchange', () => {
-    const target = (window.location.hash || '').replace(/^#/, '');
-    if (target && typeof window.switchTab === 'function') {
-      window.switchTab(target);
-    }
-  });
 
-  document.addEventListener('DOMContentLoaded', () => setTimeout(applyAuditV3FinalPolish, 50));
+// --- Insights MVP + audit-chain verification ------------------------------------------------
+let insightsCache = null;
+async function loadInsights(days = 30) {
+  try {
+    const res = await fetch('/api/insights?days=' + days);
+    if (!res.ok) return;
+    insightsCache = await res.json();
+    renderInsights(insightsCache);
+  } catch (e) { console.error(e); }
+}
+
+function fmtHours(h) {
+  if (h === null || h === undefined) return '—';
+  if (h < 1) return Math.round(h * 60) + 'm';
+  if (h < 48) return `${Math.floor(h)}h ${Math.round((h % 1) * 60)}m`;
+  return (h / 24).toFixed(1) + 'd';
+}
+
+function renderInsights(d) {
+  const ct = d.cycle_time || {};
+  const avgEl = document.getElementById('invAvgClose');
+  if (avgEl) avgEl.innerText = fmtHours(ct.median_h);
+  const avgLbl = document.getElementById('invAvgCloseLbl');
+  if (avgLbl) avgLbl.innerText = `median • avg ${fmtHours(ct.avg_h)} (n=${ct.n || 0})`;
+  const panel = document.getElementById('insightsPanel');
+  if (!panel) return;
+  document.getElementById('insightsMeta').innerText =
+    `Last ${d.window_days} days • ${d.live_cases} live + ${d.synthetic_cases} synthetic cases`;
+  const freq = d.exception_frequency_by_location || {};
+  const kinds = ['TEMP_EXCURSION', 'COOLING_FAILURE', 'SENSOR_DROPOUT'];
+  const label = k => ({ TEMP_EXCURSION: 'Temp excursion', COOLING_FAILURE: 'Cooling failure', SENSOR_DROPOUT: 'Sensor dropout' }[k] || k);
+  const freqRows = Object.keys(freq).sort().map(loc => `<tr><td>${escapeHtml(loc)}</td>${kinds.map(k => `<td class="mono">${freq[loc][k] || 0}</td>`).join('')}<td class="mono"><b>${freq[loc].total || 0}</b></td></tr>`).join('');
+  const d2r = d.detection_to_review || {};
+  const weeks = Object.entries(d.throughput_per_week || {});
+  const bd = d.burndown || [];
+  const maxOpen = Math.max(1, ...bd.map(x => Math.max(x.open, x.ideal_remaining)));
+  const w = 320, h = 90, step = bd.length > 1 ? w / (bd.length - 1) : w;
+  const pts = key => bd.map((x, i) => `${(i * step).toFixed(1)},${(h - (x[key] / maxOpen) * h).toFixed(1)}`).join(' ');
+  panel.innerHTML = `
+    <div class="kpi-4" style="margin-bottom:14px;">
+      <div class="kpi-mini"><div class="lbl">Detection → review</div><div class="num mono">${fmtHours(d2r.median_h)}</div><div class="lbl">median • avg ${fmtHours(d2r.avg_h)}</div></div>
+      <div class="kpi-mini"><div class="lbl">Cycle time</div><div class="num mono">${fmtHours(ct.median_h)}</div><div class="lbl">median • avg ${fmtHours(ct.avg_h)}</div></div>
+      <div class="kpi-mini"><div class="lbl">Unresolved</div><div class="num mono">${d.unresolved}</div><div class="lbl">${(d.overdue || []).length} overdue</div></div>
+      <div class="kpi-mini"><div class="lbl">Throughput</div><div class="num mono">${weeks.length ? weeks[weeks.length - 1][1] : 0}</div><div class="lbl">closed this week</div></div>
+    </div>
+    <div class="sec-head"><h2 style="font-size:14px;">Exception frequency by location</h2></div>
+    <table><thead><tr><th>Location</th>${kinds.map(k => `<th>${label(k)}</th>`).join('')}<th>Total</th></tr></thead><tbody>${freqRows || '<tr><td colspan="5">No exceptions in window</td></tr>'}</tbody></table>
+    <div class="sec-head" style="margin-top:14px;"><h2 style="font-size:14px;">Backlog burndown</h2><span class="sec-meta">open cases vs ideal</span></div>
+    <svg viewBox="0 0 ${w} ${h + 4}" style="width:100%; max-width:100%; height:auto;" role="img" aria-label="Backlog burndown chart">
+      <polyline points="${pts('ideal_remaining')}" fill="none" stroke="#CBD5E1" stroke-width="2" stroke-dasharray="4 4"/>
+      <polyline points="${pts('open')}" fill="none" stroke="var(--orange)" stroke-width="2.5"/>
+    </svg>
+    <div class="sec-head" style="margin-top:14px;"><h2 style="font-size:14px;">Overdue cases</h2><span class="sec-meta">review or close SLA breached</span></div>
+    ${(d.overdue || []).slice(0, 6).map(o => `<div class="list-row"><div class="row-icon warn">⏱</div><div class="row-main"><div class="row-title">${escapeHtml(o.case_id)} • ${escapeHtml(o.location_id)}</div><div class="row-sub">${label(o.kind)} • ${escapeHtml(o.priority)} • ${fmtHours(o.age_h)} old • ${o.reasons.map(r => r.replace('_', ' ')).join(', ')}</div></div></div>`).join('') || '<div class="row-sub">No overdue cases 🎉</div>'}
+    <div style="font-size:11.5px; color:var(--muted); margin-top:10px;">Computed from timestamped case events (GET /api/insights). Synthetic cases replay labelled episodes with simulated handling times.</div>`;
+}
+
+async function verifyCase(caseId, btn) {
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const res = await fetch('/api/cases/' + encodeURIComponent(caseId) + '/events');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    btn.textContent = d.chain_valid ? `✓ Chain intact (${d.events.length} events)` : '✕ Chain broken';
+    btn.style.color = d.chain_valid ? 'var(--green)' : 'var(--red)';
+  } catch (e) {
+    btn.textContent = '✕ ' + e.message;
+  } finally { btn.disabled = false; }
 }

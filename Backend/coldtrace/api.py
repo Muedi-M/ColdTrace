@@ -15,7 +15,8 @@ from datetime import datetime, timezone
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import nim
+from . import cases as CS, nim, pubsub, storage
+from . import thresholds as TH
 from .service import LOCATIONS, Detector
 
 from pathlib import Path
@@ -72,9 +73,15 @@ class SensorEvent(BaseModel):
     spoilage_risk: float | None = Field(default=None, ge=0, le=1)
 
 
+@app.get("/health")
 @app.get("/healthz")
 def healthz():
-    return {"ok": True, "locations": LOCATIONS, "storage": storage_status()}
+    """/health is the public alias: Cloud Run's front end reserves /healthz and returns 404 for it."""
+    cfg = TH.load()
+    return {"ok": True, "locations": LOCATIONS, "thresholds_version": cfg["version"],
+            "storage": {**storage_status(),
+                        "pubsub_publishing": bool(pubsub.topic_path()),
+                        "case_events_path": os.getenv("CASE_EVENTS_PATH") or None}}
 
 
 @app.post("/ingest", dependencies=[Depends(require_key)])
@@ -88,7 +95,7 @@ def ingest(e: SensorEvent):
             ev[k] = getattr(e, k)
     det = detector().ingest(ev)
     if det.alert:
-        _state["alerts"][det.alert.alert_id] = det.alert
+        _register_alert(det.alert)
     return {"status": det.status, "rf_label": det.rf_label, "rf_confidence": round(det.rf_confidence, 3),
             "rule_label": det.rule_label, "alert": det.alert.to_case_json() if det.alert else None}
 
@@ -177,47 +184,6 @@ def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="
         return
     raise HTTPException(401, "invalid or missing X-API-Key")
 
-def require_demo_replay_auth(request: Request, x_api_key: str = Header(default="")) -> None:
-    """Allow valid X-API-Key or same-origin browser console requests on /api/demo/replay."""
-    try:
-        require_key(x_api_key=x_api_key)
-        return
-    except HTTPException as exc:
-        if exc.status_code != 401:
-            raise
-    host = (request.url.hostname or "").lower()
-    origin = (request.headers.get("origin") or "").lower()
-    referer = (request.headers.get("referer") or "").lower()
-    if host and (
-        f"://{host}" in origin
-        or f"://{host}" in referer
-        or (host in {"localhost", "127.0.0.1"} and not origin and not referer)
-    ):
-        return
-    raise HTTPException(401, "invalid or missing X-API-Key")
-
-@app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
-def trigger_demo_replay():
-    csv_path = Path(__file__).resolve().parent.parent / "data" / "cold_chain_labeled_2022_2026.csv"
-    if not csv_path.exists():
-        raise HTTPException(404, "cold_chain_labeled_2022_2026.csv not found")
-    with csv_path.open("r", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            loc = row["Storage_Location_ID"]
-            ev = {
-                "location_id": loc,
-                "ts": row["Timestamp"],
-                "T": float(row["Warehouse_Temperature_C"]),
-                "H": float(row["Warehouse_Humidity_Percent"]),
-                "C": float(row["Cooling_Load_Percent"]),
-                "S": float(row["Sensor_Connectivity"]),
-            }
-            _latest_readings[loc] = {"T": ev["T"], "H": ev["H"], "C": ev["C"], "S": ev["S"]}
-            _reading_counts[loc] = _reading_counts.get(loc, 0) + 1
-            det = detector().ingest(ev)
-            if det.alert:
-                _state["alerts"][det.alert.alert_id] = det.alert
-    return {"status": "replayed", "alerts_total": len(_state["alerts"])}
 
 # --- Cold Chain Alerts Video UI Endpoints (Backed by cold_chain_labeled_2022_2026.csv) ---
 import csv
@@ -322,15 +288,9 @@ _ui_store = {
     ]
 }
 
-def _is_pharma_category(cat: str) -> bool:
-    c = (cat or "").strip().lower()
-    return any(k in c for k in ("pharma", "biologic", "vaccine", "insulin"))
-
 def _is_temp_out_of_range(temp_val: float, cat: str) -> bool:
-    t = float(temp_val)
-    if _is_pharma_category(cat):
-        return t < 2.0 or t > 8.0
-    return t > 2.0
+    """Category band from the versioned thresholds file (pharma 2-8 C, chilled food <= 2 C)."""
+    return TH.is_out_of_band(temp_val, cat)
 
 _EXCURSION_TEMPS = {
     "7F-442": 11.2,
@@ -371,6 +331,24 @@ def _sync_csv_and_alerts_to_ui(force: bool = False):
             b["temp"] = _EXCURSION_TEMPS[b["code"]]
             b["peak"] = _EXCURSION_TEMPS[b["code"]]
         b["status"] = _evaluate_batch_status(b, b.get("temp", 0.0))
+        b["band"] = TH.band_label(b.get("category"))
+        b["held"] = b["status"] == "Out of range" and b.get("invStatus") != "Closed"
+
+    # A unit card shows the probe of its worst batch so unit and batch never disagree.
+    for u in _ui_store["units"]:
+        flagged = [b for b in _ui_store["batches"] if b["locationId"] == u["locationId"] and b["status"] == "Out of range"]
+        if flagged:
+            worst = max(flagged, key=lambda b: abs(float(b["temp"]) - 5.0))
+            u["temp"] = worst["temp"]
+            u["warmestBatch"] = worst["code"]
+            u["band"] = worst["band"]
+        u["flaggedCount"] = len(flagged)
+        u["outOfBand"] = bool(flagged)
+    for inv in _ui_store["investigations"]:
+        c = _cases.cases.get(inv["id"]) if "_cases" in globals() else None
+        if c:
+            inv["age"] = _age(c.created_at)
+            inv["createdAt"], inv["reviewDueAt"], inv["closeDueAt"] = c.created_at, c.review_due_at, c.close_due_at
 
     # Override with any newly injected or replayed live detector alerts
     for a in _state["alerts"].values():
@@ -392,8 +370,8 @@ def _sync_csv_and_alerts_to_ui(force: bool = False):
 
 @app.get("/api/ui/state")
 def get_video_ui_state():
-    _ui_sync_ts = time.monotonic()
-    return _ui_store
+    _sync_csv_and_alerts_to_ui()  # cheap: skipped within the 5 s TTL
+    return {**_ui_store, "thresholdsVersion": TH.load()["version"]}
 
 @app.post("/api/demo/replay", dependencies=[Depends(require_demo_replay_auth)])
 def replay_labeled_csv():
@@ -408,8 +386,8 @@ def replay_labeled_csv():
             det = detector().ingest(ev)
             count += 1
             if det.alert:
-                _state["alerts"][det.alert.alert_id] = det.alert
-    _sync_csv_and_alerts_to_ui()
+                _register_alert(det.alert)
+    _sync_csv_and_alerts_to_ui(force=True)
     return {"status": "replayed", "source": path.name, "rows_processed": count, "alerts_total": len(_state["alerts"])}
 
 @app.post("/api/demo/inject", dependencies=[Depends(require_key)])
@@ -438,9 +416,9 @@ async def inject_demo_fault(req: Request):
     _reading_counts[loc] = _reading_counts.get(loc, 0) + 1
     det = detector().ingest(ev)
     if det.alert:
-        _state["alerts"][det.alert.alert_id] = det.alert
+        _register_alert(det.alert)
 
-    _sync_csv_and_alerts_to_ui()
+    _sync_csv_and_alerts_to_ui(force=True)
     inv = next((x for x in _ui_store["investigations"] if loc in x["unitName"]), None)
     if inv:
         inv["temp"] = round(float(ev["T"]), 1)
@@ -452,6 +430,8 @@ async def inject_demo_fault(req: Request):
             "source": "Demo Fault Injector",
             "time": "Just now"
         })
+        if inv["id"] in _cases.cases and _cases.cases[inv["id"]].state != "Closed":
+            _cases.note(inv["id"], "Demo Fault Injector", f"Simulated {kind}: T={ev['T']} C={ev['C']} S={ev['S']}")
 
     return {
         "status": "injected",
@@ -470,6 +450,11 @@ async def assign_video_investigation(inv_id: str, req: Request):
     inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
     if not inv:
         raise HTTPException(404, "unknown investigation")
+    if inv["state"] == "Closed":
+        raise HTTPException(409, f"{inv_id} is closed")
+    if inv_id in _cases.cases:
+        _cases.transition(inv_id, "In progress", "Operations Lead", note or f"assigned to {assignee}", assignee=assignee)
+        pubsub.publish("case_event", _cases.cases[inv_id].events[-1].__dict__, _cases.cases[inv_id].location_id)
     inv["assignee"] = assignee
     inv["statusText"] = assignee
     inv["state"] = "In progress"
@@ -504,6 +489,8 @@ def ask_video_ai(inv_id: str):
             else:
                 formatted = str(note_obj)
             inv["aiSummary"] = formatted
+            if inv_id in _cases.cases:
+                _cases.note(inv_id, "NVIDIA NIM", "AI triage note generated (human review required)")
             return {"status": "ok", "narrative": formatted}
         except Exception as e:
             return {"status": "fallback", "narrative": inv["aiSummary"] + f"\n\n(NIM note: {type(e).__name__})"}
@@ -514,6 +501,9 @@ def resolve_video_investigation(inv_id: str):
     inv = next((x for x in _ui_store["investigations"] if x["id"] == inv_id), None)
     if not inv:
         raise HTTPException(404, "unknown investigation")
+    if inv_id in _cases.cases and _cases.cases[inv_id].state != "Closed":
+        _cases.transition(inv_id, "Closed", "QA Reviewer", "disposition recorded; evidence hash archived")
+        pubsub.publish("case_event", _cases.cases[inv_id].events[-1].__dict__, _cases.cases[inv_id].location_id)
     inv["state"] = "Closed"
     inv["statusText"] = "Resolved"
     inv["timeline"].insert(0, {
@@ -528,6 +518,119 @@ def resolve_video_investigation(inv_id: str):
         b["stageIndex"] = 3
         b["invStatus"] = "Closed"
     return {"status": "resolved", "inv_id": inv_id}
+
+
+# --- Case log, Insights MVP, thresholds, validation and Pub/Sub ------------------------------
+_cases = CS.CaseStore()
+
+
+def _age(iso_ts: str) -> str:
+    mins = int((datetime.now(timezone.utc) - CS._parse(iso_ts)).total_seconds() // 60)
+    if mins < 60:
+        return f"{max(mins, 0)}m ago"
+    if mins < 48 * 60:
+        return f"{mins // 60}h ago"
+    return f"{mins // 1440}d ago"
+
+
+def _seed_cases() -> None:
+    """Live cases for the three console investigations + seeded synthetic history from labels."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    seed = {  # id: (created minutes ago, path of (state, minutes ago, actor, assignee))
+        "INV-2048": (38, []),
+        "INV-2047": (180, [("In progress", 150, "Operations Lead", "Sipho Peters")]),
+        "INV-2046": (1440, [("In progress", 1380, "Operations Lead", "Aisha Dlamini"),
+                            ("Under review", 600, "QA reviewer", None)]),
+    }
+    for inv in _ui_store["investigations"]:
+        created_ago, path = seed.get(inv["id"], (60, []))
+        loc = next((l for l in LOCATIONS if l in inv["unitName"]), LOCATIONS[0])
+        _cases.create(inv["id"], loc, inv["reason"], inv["priority"], batch_code=inv["batchCode"],
+                      detected_at=now - timedelta(minutes=created_ago + 30), created_at=now - timedelta(minutes=created_ago))
+        for state, ago, actor, assignee in path:
+            _cases.transition(inv["id"], state, actor, ts=now - timedelta(minutes=ago), assignee=assignee)
+
+
+def _register_alert(alert) -> None:
+    _state["alerts"][alert.alert_id] = alert
+    pubsub.publish("alert", alert.to_case_json(), alert.location_id)
+    if alert.alert_id not in _cases.cases:
+        _cases.create(alert.alert_id, alert.location_id, alert.kind, "High", actor="detector")
+
+
+_seed_cases()
+_backfill_done = False
+
+
+def _ensure_backfill() -> None:
+    """Synthetic history is built on first use, so start-up stays fast (CSV is lazy-loaded)."""
+    global _backfill_done
+    if _backfill_done:
+        return
+    _backfill_done = True
+    if os.getenv("SYNTHETIC_CASE_BACKFILL", "true").lower() == "true":
+        CS.backfill_from_labels(_cases, _get_csv_cache(), days=int(os.getenv("BACKFILL_DAYS", "60")))
+
+
+@app.get("/api/insights")
+def get_insights(days: int = 30, include_synthetic: bool = True):
+    _ensure_backfill()
+    days = max(1, min(days, 120))
+    pool = [c for c in _cases.all() if include_synthetic or not c.synthetic]
+    return CS.insights(pool, window_days=days)
+
+
+@app.get("/api/cases")
+def list_cases(state: str | None = None, include_synthetic: bool = False, limit: int = 50):
+    if include_synthetic:
+        _ensure_backfill()
+    rows = [c for c in _cases.all() if (include_synthetic or not c.synthetic) and (not state or c.state == state)]
+    rows.sort(key=lambda c: c.created_at, reverse=True)
+    return {"cases": [c.public() for c in rows[: max(1, min(limit, 500))]]}
+
+
+@app.get("/api/cases/{case_id}/events")
+def case_events(case_id: str):
+    c = _cases.cases.get(case_id)
+    if not c:
+        raise HTTPException(404, "unknown case")
+    return {"case": c.public(), "events": [e.__dict__ for e in c.events], "chain_valid": _cases.verify_chain(case_id)}
+
+
+@app.get("/api/thresholds")
+def get_thresholds():
+    return TH.summary()
+
+
+@app.get("/api/validation")
+def get_validation_report():
+    """Latest data-validation report (python -m coldtrace.validation <csv>) plus live reference check."""
+    from . import validation as V
+    report_path = Path(__file__).resolve().parent.parent / "artifacts" / "validation_report.json"
+    report = json.loads(report_path.read_text()) if report_path.exists() else None
+    ref_dir = Path(__file__).resolve().parent.parent / "data" / "reference"
+    ref = V.validate_references(*V.load_reference(ref_dir)) if ref_dir.exists() else None
+    return {"telemetry": report, "reference_integrity": ref}
+
+
+@app.post("/pubsub/push")
+async def pubsub_push(req: Request, token: str = ""):
+    """Push endpoint for sensor readings published to the telemetry topic by field gateways."""
+    expected = os.getenv("PUBSUB_PUSH_TOKEN", "")
+    if not expected or not hmac.compare_digest(token.encode(), expected.encode()):
+        raise HTTPException(401, "invalid push token")
+    try:
+        payload, attrs = pubsub.decode_push(await req.json())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    if attrs.get("type", "reading") != "reading":
+        return {"status": "ignored", "type": attrs.get("type")}  # our own alert/case messages
+    try:
+        event = SensorEvent(**payload)
+    except Exception:
+        raise HTTPException(400, "payload is not a valid SensorEvent")
+    return ingest(event)
 
 
 @app.get("/favicon.ico", include_in_schema=False)
