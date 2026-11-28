@@ -12,9 +12,11 @@
 **Know before the product spoils.**
 
 - **Live Console:** <https://coldtrace-app-644777661209.us-central1.run.app>
+- **3-Page Brief:** [PROJECT_DOCS/ColdTrace_Brief.pdf](PROJECT_DOCS/ColdTrace_Brief.pdf)
 - **Research & Evaluation Summary:** [PROJECT_DOCS/RESEARCH_SUMMARY.md](PROJECT_DOCS/RESEARCH_SUMMARY.md)
 - **Presentation Deck (8 slides):** [PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx](<PROJECT_DOCS/ColdTrace — Cold-Chain Operations Console (1).pptx>)
-- **Recorded Walkthrough (≤ 5 min):** *Add walkthrough link before final submission*
+- **Recorded Walkthrough (≤ 5 min):** [Watch on Google Drive](https://drive.google.com/file/d/1iflIPeFDiDTi-kW6cpJSzHZdk1qhVrG0/view?usp=sharing)
+- **Implementation Plan, Owners & Risks:** [PROJECT_DOCS/IMPLEMENTATION_PLAN.md](PROJECT_DOCS/IMPLEMENTATION_PLAN.md) · **Security:** [SECURITY.md](SECURITY.md)
 - **License:** MIT License (see [18. License](#18-license))
 
 ColdTrace monitors refrigerated storage facilities in real time, detects temperature excursions, cooling failures, and sensor dropouts before spoilage occurs, links alerts to at-risk inventory batches, and generates grounded AI incident analyses via NVIDIA NIM.
@@ -73,17 +75,23 @@ ColdTrace is a cold-chain operations console that closes that gap. It ingests se
 
 ### 1.1 Operational Evidence & Context
 
-* **Cold-chain spoilage risk:** Unchecked temperature drift and cold-chain breaks across storage and transit risk potency loss, quarantine holds, or write-offs for pharmaceuticals, biologics, and perishables.
+* **Cost:** biopharma loses about **US$35 bn a year** to failures in temperature-controlled logistics; 44.6 % of surveyed organisations report multiple excursions a year (IQVIA Institute, via [Air Cargo News](https://www.aircargonews.net/?p=1023281)).
+* **Storage, not only transit:** vaccines were exposed to **> 8 °C at every storage level** in a 10-state study ([Bull WHO 2013](https://scielosp.org/article/bwho/2013.v91n12/906-913)); a 45-study review found 33–37 % exposed to below-range temperatures ([CIDRAP](https://www.cidrap.umn.edu/public-health/freezing-shortages-among-global-vaccine-challenges)).
+* **South Africa:** 8-month monitoring showed clinic vaccine fridges could not hold stable temperatures ([PMC5357745](https://pmc.ncbi.nlm.nih.gov/articles/PMC5357745)); National Department of Health SOPs require continuous monitoring with alarms and a record of every excursion ([NDoH SOP, 2021](https://knowledgehub.health.gov.za/system/files/elibdownloads/2022-01/SOP_Routine%20Monitoring%20of%20Vaccine%20Handling_%2020122021.pdf)).
+* **Alarm fatigue:** one health system addressed only **22 % of ~11,000** monthly excursion alerts ([Rutgers](https://rucore.libraries.rutgers.edu/rutgers-lib/65271/)); more than half of health workers in a Tanzanian study did not review monthly temperature logs ([PMC9713142](https://pmc.ncbi.nlm.nih.gov/articles/PMC9713142)).
 * **Operating bands & dataset:** Evaluates `2°C–8°C` (pharma/biologics) and `≤ 2°C` (perishables) across 30-minute telemetry intervals (`254,160` rows in `cold_chain_labeled_2022_2026.csv`).
 * **Early intervention:** Catching drift and cooling degradation early gives operators time to inspect units, protect batches, or dispatch maintenance.
 
 ### 1.2 Friction Points & Console Mapping
 
+The friction points follow from the evidence in §1.1; they remain working hypotheses until confirmed by operator interviews ([PROJECT_DOCS/USER_RESEARCH.md](PROJECT_DOCS/USER_RESEARCH.md)).
+
 | Friction Point | Operational Impact | ColdTrace Capability |
 |---|---|---|
 | **Late discovery** | Excursions noticed after warming or at shift handover | 30-min telemetry ingestion, 24h causal rolling features, Random Forest + SOP scoring, and CSV replay |
 | **Alert fatigue** | Operators mute or ignore repetitive threshold blips | Causal rolling features, alert debouncing, and `Flagged` / `Watch` / `Cleared` band filters |
-| **Audit trail gaps** | Slow manual reconstruction during QA/compliance reviews | `OPEN → ACKNOWLEDGED → CLOSED` lifecycle and tamper-evident `evidence_sha256` sealing |
+| **Audit trail gaps** | Slow manual reconstruction during QA/compliance reviews | `OPEN → ACKNOWLEDGED → CLOSED` lifecycle, tamper-evident `evidence_sha256` sealing and a hash-chained case event log |
+| **No owner or deadline** | Alerts sit unassigned; nobody sees what is overdue | Assignment, review/close SLAs, overdue list and cycle-time Insights |
 
 ### 1.3 Synthetic Telemetry & Evaluation Dataset
 
@@ -147,9 +155,12 @@ flowchart TB
 
 | Component | Purpose |
 |---|---|
-| **FastAPI (`api.py`)** | Serves the dashboard, authenticates requests, and exposes `/healthz`, `/ingest`, `/api/demo/replay`, alert lifecycle, and NIM endpoints. |
+| **FastAPI (`api.py`)** | Serves the dashboard, authenticates requests, and exposes `/health`, `/ingest`, `/api/demo/replay`, alert lifecycle, and NIM endpoints. |
 | **Feature engine (`features.py`)** | Causal 24-hour rolling features with zero look-ahead leakage. |
 | **Detector (`model.py`, `rules.py`)** | Random Forest classifier plus SOP threshold baseline for comparison. |
+| **Data quality (`validation.py`, `thresholds.py`)** | Quarantine with reasons, cadence and flat-run checks, reference integrity, versioned thresholds. |
+| **Case log & Insights (`cases.py`)** | Hash-chained case events, SLAs and Insights MVP metrics. |
+| **Pub/Sub (`pubsub.py`)** | Publishes alerts and case events; push endpoint for sensor gateways. |
 | **Service layer (`service.py`)** | Streaming state, debouncing, `OPEN → ACKNOWLEDGED → CLOSED` transitions, and `evidence_sha256` sealing. |
 | **NIM client (`nim.py`)** | Generates schema-validated incident notes labeled `AI-GENERATED, REVIEW BEFORE ACTING`. |
 | **Cloud Run & GCP Services** | Hosts `coldtrace-app` (`us-central1`) with BigQuery (`coldtrace_warehouse`), Firestore (`USE_FIRESTORE`), Pub/Sub (`telemetry_events`), Secret Manager, and Terraform/WIF automation. |
@@ -164,12 +175,20 @@ coldtrace/
 ├── LICENSE                                                # MIT License
 ├── env.example                                            # Sample environment variables (never commit .env)
 ├── PROJECT_DOCS/
+│   ├── ColdTrace_Brief.pdf                                # 3-page brief (source: BRIEF.md)
 │   ├── RESEARCH_SUMMARY.md                                # Research & evaluation summary
+│   ├── IMPLEMENTATION_PLAN.md                             # Timeline, owners, progress, risk register
+│   ├── USER_RESEARCH.md                                   # Interview guide & evidence log
 │   └── ColdTrace — Cold-Chain Operations Console (1).pptx # 8-slide presentation deck
+├── SECURITY.md                                            # Endpoint access, audit chain, secrets
+├── tools/ctpush                                           # Team git CLI (check, commit, push, PR)
+├── Validation_coldtrace.sql · bq_load_coldtrace.sh        # BigQuery load & validation queries
 ├── terraform/                                             # Infrastructure as Code (project, IAM, WIF, budget)
 ├── .github/workflows/ci-deploy.yml                        # Tests, Terraform validate & WIF Cloud Run deploy
 └── Backend/
-    ├── coldtrace/                                         # FastAPI app, features, RF/SOP models, service, NIM, eval
+    ├── coldtrace/                                         # FastAPI app, features, RF/SOP models, service, NIM, validation, cases, Pub/Sub
+    ├── config/thresholds.json                             # Versioned thresholds & SLAs
+    ├── data/reference/                                    # Locations, batches, shipments
     ├── frontend/                                          # Console UI (index.html, app.js)
     ├── data/cold_chain_labeled_2022_2026.csv              # Primary 2022–2026 dataset (254,160 rows)
     ├── artifacts/                                         # Trained Random Forest model & evaluation outputs
@@ -197,16 +216,24 @@ coldtrace/
 | SOP threshold rules macro-F1 | **0.626** |
 | AI triage role | Optional NVIDIA NIM note (`AI-GENERATED, REVIEW BEFORE ACTING`) |
 
+**Event-level test (283 labelled failures, time-ordered split):** Random Forest event recall **94.3 %** vs 83.7 % for SOP rules and 4.9 % for a fixed > 8 °C alarm; median time-to-detect **0.5 h** (excursions) and **1.0 h** (cooling failures) vs 1.5 h and 2.5 h for rules; 0.106 vs 0.088 false alerts per location-day. All results are on simulated data. The committed n = 120 NIM run used the harness's mock provider; a live NIM comparison at that size is pending.
+
+### Data Validation, Thresholds & Insights MVP
+
+* **Validation** — Chantell's rules run in BigQuery (`Validation_coldtrace.sql`) and in the app (`Backend/coldtrace/validation.py`): rows are quarantined with a reason (bad timestamp, unknown location, missing or impossible value, duplicate, conflicting duplicate); cadence gaps and flat runs are reported per location; locations → batches → shipments are checked for integrity. Full dataset: 254,160 rows, 0 quarantined, 0 missing readings, 1,030 flat runs (the dropout signal). Run: `python -m coldtrace.validation data/cold_chain_labeled_2022_2026.csv`.
+* **Thresholds** — one versioned file, [`Backend/config/thresholds.json`](Backend/config/thresholds.json): category bands, detector constants, validation ranges, review/close SLAs and change history; version and SHA-256 at `GET /api/thresholds`.
+* **Case log & Insights MVP** — every investigation stores created, started, reviewed, completed and due timestamps; each status change is a hash-chained event (`Backend/coldtrace/cases.py`). `GET /api/insights` reports exception frequency by location, detection-to-review time, cycle time (average **and** median), throughput, unresolved and overdue cases and a backlog burndown, shown in **Quality & Audit → Operations Insights**. Historical cases are generated from labelled episodes with seeded handling times and flagged `synthetic`; the API reports live vs synthetic counts.
+
 ---
 
 ## 5. Team, Roles & Responsibilities
 
 **Team ColdTrace** divides ownership across four tracks:
 
-* **Moorthy (DevOps & Cloud):** Owns GCP project/billing setup, Terraform IaC, keyless GitHub Actions CI/CD with Workload Identity Federation, Secret Manager rotation, Cloud Run deployments, and runtime reliability.
-* **Chantell (Data Analytics):** Owns BigQuery batch loading (`bq load`), `Timestamp`-partitioned queries, schema checks, and telemetry quality/dropout validation.
-* **Muedi (AI & Cloud Foundation):** Owns Random Forest anomaly detection, `N = 120` evaluation, NVIDIA NIM integration, and serverless Pub/Sub, Scheduler, Firestore, and Cloud Run foundations.
-* **Peter (Security Review):** Performs read-only audits across IAM/WIF bindings, authentication/secret controls, Cloud Audit/Monitoring logs, and `evidence_sha256` integrity.
+* **Moorthy R (DevOps & Cloud):** Owns GCP project/billing setup, Terraform IaC, keyless GitHub Actions CI/CD with Workload Identity Federation, Secret Manager rotation, Cloud Run deployments, and runtime reliability.
+* **Muedi Mbambala (AI Research Foundations, team lead):** Owns the question "can detection be trusted?": synthetic data simulator, SOP rules baseline, Random Forest model, event-level and `N = 120` evaluation, NVIDIA NIM integration, case log and Insights MVP; facilitates the weekly meeting and submission package.
+* **Chantell Masilela (Data Analytics):** Owns the data validation rules — BigQuery batch loading (`bq load`), `Timestamp`-partitioned SQL checks, schema/completeness, 2–8 °C excursion, cadence and dropout validation — mirrored in the app by `validation.py`.
+* **Peter Opiyo (Security Review):** Performs read-only audits across IAM/WIF bindings, authentication/secret controls, Cloud Audit/Monitoring logs, and `evidence_sha256` integrity.
 
 ---
 
@@ -361,12 +388,17 @@ gcloud run deploy coldtrace-app \
 | Method & Path | Auth | Purpose |
 |---|---|---|
 | `GET /` | Public | Serves the ColdTrace Operations Console web UI |
-| `GET /healthz` | Public | Health check and active storage / Pub/Sub status |
+| `GET /health` | Public | Health check, thresholds version and storage / Pub/Sub status (`/healthz` also exists, but Cloud Run reserves that path, so use `/health` on the deployed URL) |
 | `POST /ingest` | `X-API-Key` | Ingests a 30-min reading, updates 24h causal rolling features, and evaluates alerts |
 | `POST /api/demo/replay` | `X-API-Key` / Console | Replays `cold_chain_labeled_2022_2026.csv` into the streaming detector and syncs UI state |
 | `GET /api/locations` & `GET /api/alerts` | Optional | Returns hub telemetry and alerts with `evidence_sha256` and lifecycle state |
 | `POST /api/alerts/{id}/ack` & `/close` | `X-API-Key` | Transitions alerts through `OPEN → ACKNOWLEDGED → CLOSED` |
 | `POST /alerts/{id}/explain` | `X-API-Key` | Generates a schema-validated NVIDIA NIM incident note (`AI-GENERATED, REVIEW BEFORE ACTING`) |
+| `POST /api/ui/investigations/{id}/assign` · `/ask-ai` · `/resolve` | `X-API-Key` | Case workflow; each call appends a hash-chained case event; closed cases return `409` on re-assign |
+| `GET /api/insights?days=30` | Public | Insights MVP: frequency by location, detection-to-review, avg + median cycle time, throughput, overdue, burndown |
+| `GET /api/cases` · `GET /api/cases/{id}/events` | Public | Case timestamps and full event log with `chain_valid` |
+| `GET /api/thresholds` · `GET /api/validation` | Public | Versioned thresholds with SHA-256; validation report and reference-integrity check |
+| `POST /pubsub/push?token=…` | Push token | Pub/Sub push endpoint for sensor gateways (`type=reading`) |
 
 ---
 
@@ -410,7 +442,20 @@ gcloud run deploy coldtrace-app \
 
 ## 17. Implementation Plan, Risk Register & Roadmap
 
-### 17.1 Key Milestones
+### 17.1 Timeline, Owners & Progress
+
+| Week | Dates | Deliverable | Owner | Status |
+|---|---|---|---|---|
+| 1 | 2–8 Nov | Scope (3 sites, 3 exception types, detect → review → close), team rhythm, hackathons | All | ✅ |
+| 2 | 9–15 Nov | Synthetic labelled dataset, SOP baseline, Random Forest, event-level evaluation, NIM client | Muedi | ✅ |
+| 3 | 16–22 Nov | Cloud Run, Terraform, WIF CI/CD, Secret Manager, security scans, console | Moorthy, Peter | ✅ |
+| 4 | 23–27 Nov | BigQuery load + SQL validation checks | Chantell | ✅ |
+| 4 | 26–28 Nov | n = 120 benchmark; in-app validation, case log, Insights MVP, Pub/Sub publishing | Muedi | ✅ |
+| 4 | 27–28 Nov | Security notes & endpoint tests (sign-off pending), README, brief, 8-slide deck, walkthrough | Peter, Moorthy, All | ✅ |
+
+Full plan with proof links, resources and a 10-item risk register: [PROJECT_DOCS/IMPLEMENTATION_PLAN.md](PROJECT_DOCS/IMPLEMENTATION_PLAN.md).
+
+### 17.1a Key Milestones
 
 * **Core Detection & Console Workflow:** Category-aware safe bands (`2°C–8°C` pharma/biologics; `≤ 2°C` perishables), 24h causal rolling features, `OPEN → ACKNOWLEDGED → CLOSED` workflow, `evidence_sha256` sealing, and replay on `cold_chain_labeled_2022_2026.csv`.
 * **Benchmarking, GCP & Security Controls:** Random Forest (`0.918` F1) vs. SOP rules (`0.626` F1) on `N = 120`, guarded NVIDIA NIM explanations, BigQuery (`254,160` rows) / Firestore / Pub/Sub integration, and WIF + Secret Manager + Gitleaks guardrails.
@@ -428,7 +473,8 @@ gcloud run deploy coldtrace-app \
 
 ### 17.3 What's Next After BUILD
 
-* Add the final `≤ 5`-minute recorded walkthrough link at the top of `README.md` and verify all submission links.
+* Run the live NVIDIA NIM comparison at n = 120 and rate triage-note usefulness with reviewers.
+* Confirm the friction points with operator interviews (`PROJECT_DOCS/USER_RESEARCH.md`).
 * Calibrate physical sensors across `JHB-DC01`, `DBN-DC02`, and `CPT-DC03` and pilot real-sensor streams toward multi-site rollout.
 
 ---

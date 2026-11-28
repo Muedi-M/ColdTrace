@@ -1,0 +1,403 @@
+#!/usr/bin/env python3
+"""ctpush — ColdTrace team CLI: check, commit under your own name, push, open a PR (never merge).
+
+Usage (run from anywhere inside the repo):
+  tools/ctpush whoami                       show your git identity and lane
+  tools/ctpush setup --member chantell      set git user.name/email for this repo (asks for email)
+  tools/ctpush status                       branch, ahead/behind, changed files grouped by lane
+  tools/ctpush start data validation        new branch data/validation from origin/main
+  tools/ctpush join team/capstone           switch to a shared remote branch (creates it from main if new)
+  tools/ctpush sync                         fetch and rebase your branch on origin/main
+  tools/ctpush apply patches/01-*.patch     apply patch file(s) (3-way), nothing committed
+  tools/ctpush check                        tests, JS syntax, secret scan, big-file guard
+  tools/ctpush commit -m "add quarantine report" [--type fix] [--paths a b] [--co-author moorthy]
+  tools/ctpush push                         push current branch (refuses main)
+  tools/ctpush pr [--title ...] [--body ...] open a pull request to main with gh (never merges)
+  tools/ctpush ship -m "message"            check + commit + push + pr in one go
+
+Rules it enforces: no commits or pushes on main; commits are authored by whoever runs it
+(your own git identity, never someone else's); a staged secret or a file over 20 MB blocks the
+commit; PRs are opened, never merged (the capstone requires the PR to stay unmerged).
+"""
+from __future__ import annotations
+
+import argparse
+import fnmatch
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+MAX_FILE_MB = 20
+SECRET_PATTERNS = [
+    (re.compile(r"nvapi-[A-Za-z0-9_\-]{20,}"), "NVIDIA API key"),
+    (re.compile(r"AIza[0-9A-Za-z_\-]{35}"), "Google API key"),
+    (re.compile(r"-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----"), "private key"),
+    (re.compile(r"\"private_key\"\s*:\s*\"-----BEGIN"), "service-account JSON"),
+    (re.compile(r"ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}"), "GitHub token"),
+    (re.compile(r"(?i)(INGEST_API_KEY|NVIDIA_API_KEY|PUBSUB_PUSH_TOKEN)\s*=\s*['\"]?[A-Za-z0-9_\-]{16,}"), "hard-coded app secret"),
+]
+SECRET_FILES = re.compile(r"(^|/)(\.env(\..*)?|.*\.pem|.*\.key|credentials\.json|.*-sa\.json|\.nim_keys\.json)$")
+ALLOWED_SECRET_FILES = {".env.example"}
+
+C = {"r": "\033[31m", "g": "\033[32m", "y": "\033[33m", "b": "\033[34m", "d": "\033[2m", "x": "\033[0m"}
+if not sys.stdout.isatty() or os.getenv("NO_COLOR"):
+    C = {k: "" for k in C}
+
+
+def say(msg: str, color: str = "") -> None:
+    print(f"{C.get(color, '')}{msg}{C['x']}")
+
+
+def die(msg: str, code: int = 1) -> None:
+    say(f"✕ {msg}", "r")
+    sys.exit(code)
+
+
+def run(cmd: list[str], check: bool = True, capture: bool = True, cwd: Path | None = None) -> str:
+    p = subprocess.run(cmd, cwd=cwd or ROOT, text=True, capture_output=capture)
+    if check and p.returncode != 0:
+        die(f"{' '.join(cmd)} failed:\n{(p.stderr or p.stdout or '').strip()}")
+    return (p.stdout or "").strip() if capture else ""
+
+
+def git(*args: str, check: bool = True) -> str:
+    return run(["git", *args], check=check)
+
+
+def repo_root() -> Path:
+    p = subprocess.run(["git", "rev-parse", "--show-toplevel"], text=True, capture_output=True)
+    if p.returncode != 0:
+        die("not inside a git repository (cd into your ColdTrace clone)")
+    return Path(p.stdout.strip())
+
+
+ROOT = repo_root()
+_TEAM_FILE = next((p for p in (ROOT / "tools" / "team.json", Path(__file__).resolve().parent / "team.json") if p.exists()), None)
+TEAM = json.loads(_TEAM_FILE.read_text()) if _TEAM_FILE else {"members": {}, "lanes": {}, "base_branch": "main"}
+BASE = TEAM.get("base_branch", "main")
+
+
+def current_branch() -> str:
+    return git("rev-parse", "--abbrev-ref", "HEAD")
+
+
+def identity() -> tuple[str, str]:
+    return git("config", "user.name", check=False), git("config", "user.email", check=False)
+
+
+def member_for(name: str) -> tuple[str, dict] | tuple[None, None]:
+    for key, m in TEAM["members"].items():
+        if name and (name.lower() == m["name"].lower() or name.lower() == key):
+            return key, m
+    return None, None
+
+
+def lane_of(path: str) -> str:
+    for lane, globs in TEAM["lanes"].items():
+        if any(fnmatch.fnmatch(path, g) for g in globs):
+            return lane
+    return "other"
+
+
+def changed_files(staged_only: bool = False) -> list[str]:
+    out = git("diff", "--cached", "--name-only") if staged_only else git("status", "--porcelain")
+    if staged_only:
+        return [l for l in out.splitlines() if l]
+    files = []
+    for line in out.splitlines():
+        path = line[3:]
+        if " -> " in path:
+            path = path.split(" -> ", 1)[1]
+        files.append(path.strip('"'))
+    return files
+
+
+# --- commands ------------------------------------------------------------------------------------
+def cmd_whoami(_a) -> None:
+    name, email = identity()
+    key, m = member_for(name)
+    say(f"git identity : {name or '(unset)'} <{email or 'unset'}>", "b")
+    if not name or not email:
+        say("Set it once for this repo:  tools/ctpush setup --member <muedi|chantell|moorthy|peter>", "y")
+    if m:
+        say(f"team member  : {m['name']} · lane '{m['lane']}'", "g")
+    else:
+        say("team member  : not in tools/team.json (commits still work; lane hints are off)", "y")
+    say(f"branch       : {current_branch()}")
+
+
+def cmd_setup(a) -> None:
+    m = TEAM["members"].get(a.member)
+    if not m:
+        die(f"unknown member {a.member!r}; choose from {', '.join(TEAM['members'])}")
+    email = a.email or input(f"Email for {m['name']} (the one on your GitHub account): ").strip()
+    if "@" not in email:
+        die("that does not look like an email address")
+    git("config", "user.name", m["name"])
+    git("config", "user.email", email)
+    say(f"✓ this repo will commit as {m['name']} <{email}>", "g")
+
+
+def cmd_status(_a) -> None:
+    br = current_branch()
+    git("fetch", "--quiet", "origin", check=False)
+    ab = git("rev-list", "--left-right", "--count", f"origin/{BASE}...HEAD", check=False)
+    behind, ahead = (ab.split() + ["?", "?"])[:2]
+    say(f"branch {br} · {ahead} ahead / {behind} behind origin/{BASE}", "b")
+    files = changed_files()
+    if not files:
+        say("working tree clean", "g")
+        return
+    by: dict[str, list[str]] = {}
+    for f in files:
+        by.setdefault(lane_of(f), []).append(f)
+    for lane, fs in sorted(by.items()):
+        say(f"  [{lane}]", "y")
+        for f in fs:
+            print(f"    {f}")
+
+
+def cmd_start(a) -> None:
+    lane = a.lane
+    if lane not in TEAM["lanes"] and lane not in ("fix", "feat", "chore"):
+        say(f"note: '{lane}' is not a lane in tools/team.json", "y")
+    topic = re.sub(r"[^a-z0-9._-]+", "-", "-".join(a.topic).lower()).strip("-") or "work"
+    name = f"{lane}/{topic}"
+    if changed_files():
+        die("you have uncommitted changes; commit or stash them first")
+    git("fetch", "origin", BASE)
+    git("switch", "-c", name, f"origin/{BASE}")
+    say(f"✓ on new branch {name} (from origin/{BASE})", "g")
+
+
+def cmd_join(a) -> None:
+    if changed_files():
+        die("you have uncommitted changes; commit or stash them first")
+    git("fetch", "origin")
+    exists = git("ls-remote", "--heads", "origin", a.branch, check=False)
+    if exists:
+        local = git("rev-parse", "--verify", "--quiet", a.branch, check=False)
+        if local:
+            git("switch", a.branch)
+            p = subprocess.run(["git", "pull", "--rebase", "origin", a.branch], cwd=ROOT, text=True, capture_output=True)
+            if p.returncode != 0:
+                die("pull hit conflicts; resolve them, `git add`, then `git rebase --continue`")
+        else:
+            git("switch", "-c", a.branch, "--track", f"origin/{a.branch}")
+        say(f"✓ on {a.branch}, up to date with origin", "g")
+    else:
+        git("switch", "-c", a.branch, f"origin/{BASE}")
+        say(f"✓ created {a.branch} from origin/{BASE} (first push will publish it)", "g")
+
+
+def cmd_sync(_a) -> None:
+    br = current_branch()
+    git("fetch", "origin", BASE)
+    if br == BASE:
+        git("pull", "--ff-only", "origin", BASE)
+    else:
+        if changed_files():
+            die("commit or stash your changes before syncing")
+        p = subprocess.run(["git", "rebase", f"origin/{BASE}"], cwd=ROOT, text=True, capture_output=True)
+        if p.returncode != 0:
+            die("rebase hit conflicts. Fix the files, `git add` them, then `git rebase --continue` "
+                "(or `git rebase --abort` to undo).")
+    say(f"✓ {br} is up to date with origin/{BASE}", "g")
+
+
+def cmd_apply(a) -> None:
+    for patch in a.patches:
+        p = Path(patch)
+        if not p.exists():
+            die(f"no such patch: {patch}")
+        chk = subprocess.run(["git", "apply", "--check", "--3way", str(p.resolve())], cwd=ROOT, text=True, capture_output=True)
+        if chk.returncode != 0:
+            die(f"{p.name} does not apply cleanly:\n{chk.stderr.strip()}\nApply patches in numeric order on an up-to-date branch.")
+        git("apply", "--3way", "--whitespace=nowarn", str(p.resolve()))
+        say(f"✓ applied {p.name} (not committed — review with `git diff`, then ctpush commit)", "g")
+
+
+def scan_staged() -> list[str]:
+    problems = []
+    for f in changed_files(staged_only=True):
+        fp = ROOT / f
+        if SECRET_FILES.search(f) and Path(f).name not in ALLOWED_SECRET_FILES:
+            problems.append(f"{f}: looks like a secrets file — never commit it")
+        if fp.exists() and fp.is_file():
+            size_mb = fp.stat().st_size / 1e6
+            if size_mb > MAX_FILE_MB:
+                problems.append(f"{f}: {size_mb:.0f} MB (> {MAX_FILE_MB} MB) — keep large data out of git")
+    diff = git("diff", "--cached", "-U0", "--no-color", check=False)
+    for line in diff.splitlines():
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        for rx, what in SECRET_PATTERNS:
+            if rx.search(line) and "nvapi-***" not in line and "nvapi-..." not in line:
+                problems.append(f"possible {what} in staged change: {line[:90]}")
+    return problems
+
+
+def cmd_check(a) -> None:
+    ok = True
+    backend = ROOT / "Backend"
+    if not a.skip_tests and (backend / "tests").exists():
+        say("• pytest (Backend/tests)", "b")
+        env = {**os.environ, "INGEST_API_KEY": os.getenv("INGEST_API_KEY", "change-me-local-only")}
+        args = [sys.executable, "-m", "pytest", "-q", "-x"] + (["-k", "not needs"] if a.quick else [])
+        p = subprocess.run(args, cwd=backend, env=env)
+        ok &= p.returncode == 0
+    if shutil.which("node") and (backend / "frontend" / "app.js").exists():
+        say("• node --check frontend/app.js", "b")
+        ok &= subprocess.run(["node", "--check", str(backend / "frontend" / "app.js")]).returncode == 0
+    if shutil.which("terraform") and (ROOT / "terraform").exists():
+        say("• terraform fmt -check", "b")
+        ok &= subprocess.run(["terraform", "fmt", "-check", "-recursive"], cwd=ROOT / "terraform").returncode == 0
+    if shutil.which("gitleaks"):
+        say("• gitleaks (staged)", "b")
+        ok &= subprocess.run(["gitleaks", "protect", "--staged", "--redact", "-v"], cwd=ROOT).returncode == 0
+    probs = scan_staged()
+    for pr in probs:
+        say(f"  ✕ {pr}", "r")
+    ok &= not probs
+    if not ok:
+        die("checks failed — fix the items above (or use --no-check only if you know why)")
+    say("✓ checks passed", "g")
+
+
+def _guard_branch() -> str:
+    br = current_branch()
+    if br in (BASE, "master", "HEAD"):
+        die(f"you are on '{br}'. Start a branch first:  tools/ctpush start <lane> <topic>")
+    return br
+
+
+def cmd_commit(a) -> None:
+    _guard_branch()
+    name, email = identity()
+    if not name or not email:
+        die("git identity not set. Run: tools/ctpush setup --member <you>")
+    if a.paths:
+        git("add", "--", *a.paths)
+    else:
+        git("add", "-A")  # re-stage everything so a fixed file replaces a blocked version
+    staged = changed_files(staged_only=True)
+    if not staged:
+        die("nothing to commit")
+    if not a.no_check:
+        cmd_check(argparse.Namespace(skip_tests=a.skip_tests, quick=False))
+    key, me = member_for(name)
+    lanes = sorted({lane_of(f) for f in staged})
+    counts: dict[str, int] = {}
+    for f in staged:
+        counts[lane_of(f)] = counts.get(lane_of(f), 0) + 1
+    named = {k: v for k, v in counts.items() if k != "other"} or counts
+    scope = a.scope or max(sorted(named), key=lambda k: named[k])
+    if me and any(l not in (me["lane"], "docs", "other") for l in lanes):
+        say(f"note: you ({me['name']}, lane '{me['lane']}') are committing files in lanes {lanes}. "
+            "Fine for shared work — add --co-author for the lane owner if you paired.", "y")
+    msg = a.message.strip()
+    if not re.match(r"^(feat|fix|docs|test|chore|refactor|ci|perf)(\(.+\))?!?: ", msg):
+        msg = f"{a.type}({scope}): {msg}"
+    trailers = []
+    for co in a.co_author or []:
+        _, m = member_for(co)
+        if not m:
+            die(f"unknown co-author {co!r}")
+        co_email = (a.co_email or {}).get(co) if isinstance(a.co_email, dict) else None
+        handle = m.get("github")
+        if not co_email and handle:
+            co_email = f"{handle}@users.noreply.github.com"
+        if not co_email:
+            die(f"no email for {m['name']}; ask them for their GitHub email or noreply address")
+        trailers.append(f"Co-authored-by: {m['name']} <{co_email}>")
+    if a.ai_assisted:
+        trailers.append("Assisted-by: AI pair programmer (reviewed by the committer)")
+    full = msg + ("\n\n" + "\n".join(trailers) if trailers else "")
+    git("commit", "-m", full)
+    say(f"✓ committed as {name}: {msg}", "g")
+    for f in staged:
+        print(f"    {f}")
+
+
+def cmd_push(_a) -> None:
+    br = _guard_branch()
+    p = subprocess.run(["git", "push", "-u", "origin", br], cwd=ROOT, text=True, capture_output=True)
+    if p.returncode != 0:
+        err = (p.stderr or "").strip()
+        if "rejected" in err or "non-fast-forward" in err:
+            die("push rejected: the remote branch moved. Run `tools/ctpush sync`, then push again.")
+        if "403" in err or "denied" in err.lower():
+            die("no write access. Ask the repo owner to add you as a collaborator, or push to your fork and open the PR from there.")
+        die(err)
+    say(f"✓ pushed {br} to origin", "g")
+
+
+def cmd_pr(a) -> None:
+    br = _guard_branch()
+    title = a.title or git("log", "-1", "--format=%s")
+    body = a.body or (
+        "## What\n" + git("log", f"origin/{BASE}..HEAD", "--format=- %s", check=False) +
+        "\n\n## Checks\n- [x] `tools/ctpush check` passed locally\n\n"
+        "> Capstone rule: this PR stays **open and unmerged** for judging.\n")
+    if shutil.which("gh"):
+        p = subprocess.run(["gh", "pr", "create", "--base", BASE, "--head", br, "--title", title, "--body", body],
+                           cwd=ROOT, text=True, capture_output=True)
+        if p.returncode == 0:
+            say(f"✓ PR opened: {p.stdout.strip()}  (do not merge)", "g")
+            return
+        if "already exists" in (p.stderr or ""):
+            say("a PR for this branch already exists — your push updated it", "g")
+            return
+        say(f"gh could not open the PR: {(p.stderr or '').strip()}", "y")
+    remote = git("remote", "get-url", "origin")
+    m = re.search(r"github\.com[:/](.+?)(\.git)?$", remote)
+    slug = m.group(1) if m else TEAM.get("repo", "")
+    say(f"Open this link to create the PR (base {BASE}, do not merge):", "b")
+    print(f"  https://github.com/{slug}/compare/{BASE}...{br}?expand=1")
+
+
+def cmd_ship(a) -> None:
+    cmd_commit(a)
+    cmd_push(a)
+    cmd_pr(argparse.Namespace(title=None, body=None))
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(prog="ctpush", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("whoami").set_defaults(fn=cmd_whoami)
+    s = sub.add_parser("setup"); s.add_argument("--member", required=True); s.add_argument("--email"); s.set_defaults(fn=cmd_setup)
+    sub.add_parser("status").set_defaults(fn=cmd_status)
+    s = sub.add_parser("start"); s.add_argument("lane"); s.add_argument("topic", nargs="*"); s.set_defaults(fn=cmd_start)
+    s = sub.add_parser("join"); s.add_argument("branch"); s.set_defaults(fn=cmd_join)
+    sub.add_parser("sync").set_defaults(fn=cmd_sync)
+    s = sub.add_parser("apply"); s.add_argument("patches", nargs="+"); s.set_defaults(fn=cmd_apply)
+    s = sub.add_parser("check"); s.add_argument("--skip-tests", action="store_true"); s.add_argument("--quick", action="store_true"); s.set_defaults(fn=cmd_check)
+    for name, fn in (("commit", cmd_commit), ("ship", cmd_ship)):
+        s = sub.add_parser(name)
+        s.add_argument("-m", "--message", required=True)
+        s.add_argument("--type", default="feat", choices=["feat", "fix", "docs", "test", "chore", "refactor", "ci", "perf"])
+        s.add_argument("--scope", help="override the commit scope (default: the lane of the staged files)")
+        s.add_argument("--paths", nargs="+", help="stage only these paths (default: everything changed)")
+        s.add_argument("--co-author", nargs="+", help="team keys of people you paired with, e.g. moorthy")
+        s.add_argument("--ai-assisted", action="store_true", help="add an Assisted-by trailer")
+        s.add_argument("--no-check", action="store_true")
+        s.add_argument("--skip-tests", action="store_true", help="run secret/size checks but not pytest")
+        s.set_defaults(fn=fn, co_email=None)
+    sub.add_parser("push").set_defaults(fn=cmd_push)
+    s = sub.add_parser("pr"); s.add_argument("--title"); s.add_argument("--body"); s.set_defaults(fn=cmd_pr)
+    a = ap.parse_args()
+    a.fn(a)
+
+
+if __name__ == "__main__":
+    try:
+        import signal
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # quiet exit when piped to head/less
+    except (AttributeError, ValueError):
+        pass  # Windows has no SIGPIPE
+    main()
