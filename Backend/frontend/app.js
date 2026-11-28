@@ -152,6 +152,8 @@ const STAFF = [
         <polygon fill="${fill}" points="${areaPts}" />
         <line x1="0" y1="${yThresh}" x2="${w - 28}" y2="${yThresh}" stroke="#94A3B8" stroke-dasharray="3,3" stroke-width="1.2" />
         <text x="${w - 24}" y="${yThresh + 3}" font-size="9.5" font-weight="600" fill="#64748B">2°C</text>
+        <line x1="0" y1="${yHighThresh}" x2="${w - 28}" y2="${yHighThresh}" stroke="#DC2626" stroke-dasharray="3,3" stroke-width="1.2" />
+        <text x="${w - 24}" y="${yHighThresh + 3}" font-size="9.5" font-weight="600" fill="#DC2626">8°C</text>
         <polyline fill="none" stroke="${stroke}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" points="${poly}" />
         ${dots}
         <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="4" fill="${stroke}" />
@@ -183,7 +185,7 @@ const STAFF = [
 
     function matchesSearch(obj) {
       if (!searchQuery) return true;
-      return [obj.code, obj.id, obj.product, obj.category, obj.unit, obj.unitName, obj.site, obj.location, obj.batchCode, obj.shipmentId].filter(Boolean).some(v => String(v).toLowerCase().includes(searchQuery));
+      return [obj.code, obj.id, obj.invId, obj.title, obj.sub, obj.product, obj.category, obj.unit, obj.unitName, obj.site, obj.location, obj.batchCode, obj.shipmentId].filter(Boolean).some(v => String(v).toLowerCase().includes(searchQuery));
     }
 
     function renderHome() {
@@ -196,7 +198,7 @@ const STAFF = [
       if (flagged.length) {
         const codes = flagged.slice(0, 3).map(b => b.code).join(', ');
         const peak = Math.max(...flagged.map(b => b.temp));
-        document.getElementById('bannerHeadline').innerText = `Batches ${codes} exceeded temperature threshold`;
+        document.getElementById('bannerHeadline').innerText = `Batches ${codes} are outside their temperature band`;
         document.getElementById('bannerPeak').innerText = `🌡 ${peak.toFixed(1)}°C`;
       }
 
@@ -438,7 +440,9 @@ function reconcileAuditContradictions() {
     const unitCode = u.locationId || u.unitId || u.unitName || '';
     const flaggedInUnit = batches.filter(b =>
       b.status === 'Out of range' &&
-      (b.locationId === unitCode || b.unit === u.unitName || b.unitId === u.unitId)
+      ((u.locationId && b.locationId === u.locationId) ||
+       (u.unitName && b.unitName === u.unitName) ||
+       (u.unitId && b.unitId === u.unitId))
     );
     if (flaggedInUnit.length) {
       const maxExcursion = Math.max(...flaggedInUnit.map(b => Number(b.temp ?? b.peak ?? u.temp)).filter(Number.isFinite));
@@ -478,9 +482,9 @@ function renderBatches() {
         <div class="unit-card" tabindex="0" role="button" onclick="openSimModal('${u.locationId}')">
           <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700;">
             <span>${u.unitName}</span>
-            <span style="color:${u.temp > 2 ? 'var(--red)' : 'var(--green)'};">●</span>
+            <span style="color:${(u.flaggedCount > 0 || u.temp > 8) ? 'var(--red)' : 'var(--green)'};">●</span>
           </div>
-          <div class="unit-temp mono" style="color:${u.temp > 2 ? 'var(--red)' : 'var(--blue)'};">${u.temp.toFixed(1)}°C</div>
+          <div class="unit-temp mono" style="color:${(u.flaggedCount > 0 || u.temp > 8) ? 'var(--red)' : 'var(--blue)'};">${u.temp.toFixed(1)}°C</div>
           <div style="font-size:11.5px; color:var(--muted);">${u.flaggedCount} flagged • ${u.invCode}</div>
         </div>
       `).join('');
@@ -601,7 +605,7 @@ function renderBatches() {
             <div style="display:flex; gap:12px; align-items:center;">
               <div class="row-icon ${inv.state === 'Closed' ? 'ok' : 'warn'}">${inv.state === 'Closed' ? '✓' : '⚠️'}</div>
               <div>
-                <div style="font-weight:700; font-size:15.5px;">${inv.batchCode} <span style="font-weight:500; color:var(--muted); font-size:13px;">${inv.id}</span></div>
+                <div style="font-weight:700; font-size:15.5px;">${inv.batchCode} <span style="font-weight:500; color:var(--muted); font-size:13px;">${inv.id}</span>${(insightsCache && (insightsCache.overdue || []).some(o => o.case_id === inv.id)) ? ' <span class="badge high">Overdue</span>' : ''}</div>
                 <div style="font-size:12.5px; color:var(--muted); margin-top:2px;">${inv.unitName} • ${inv.reason}</div>
                 <div style="font-size:12px; color:var(--muted); margin-top:5px;">🌡 ${inv.temp.toFixed(1)}°C &nbsp;•&nbsp; 📦 ${inv.units} units &nbsp;•&nbsp; 👤 ${inv.statusText}</div>
               </div>
@@ -670,7 +674,7 @@ function renderBatches() {
             <div class="sub-tabs">
               ${['Timeline', 'Details', 'Team', 'Files (3)'].map(t => `<button class="sub-tab ${invSubTab === t ? 'active' : ''}" onclick="invSubTab='${t}'; openInvestigationDetail('${inv.id}')">${t}</button>`).join('')}
             </div>
-            ${invSubTab === 'Timeline' ? timelineHTML : ''}
+            ${invSubTab === 'Timeline' ? timelineHTML + '<div id="caseLogTimeline"></div>' : ''}
             ${invSubTab === 'Details' ? `<div style="font-size:13px; line-height:1.7;">
               <div><strong>Evidence SHA-256:</strong> <span class="mono hash">${escapeHtml(inv.sha256)}</span></div>
               <div><strong>Assigned Owner:</strong> ${inv.assignee}</div>
@@ -689,7 +693,7 @@ function renderBatches() {
             <div class="ai-chips">
               <span class="ai-chip" data-case-chip>📦 ${appData.batches.filter(b => b.invId === inv.id && b.status === 'Out of range').length} flagged batch(es)</span>
               <span class="ai-chip" data-case-chip>🚚 ${appData.batches.filter(b => b.invId === inv.id && b.held).length} held shipment(s)</span>
-              <span class="ai-chip">🤝 ${inv.handoffs} handoffs</span>
+              <span class="ai-chip" id="caseEventsChip">🔗 case log loading…</span>
             </div>
             <div style="font-size:12px; color:var(--muted); margin-bottom:10px;">AI-generated summary grounded in sealed sensor evidence. Human review required before closing.</div>
             <div id="aiNarrative" style="font-size:13px; line-height:1.55; background:#FFFFFF; padding:14px; border-radius:14px; border:1px solid var(--border); white-space:pre-wrap;">${inv.aiSummary}</div>
@@ -698,6 +702,7 @@ function renderBatches() {
       `;
       ['home', 'batches', 'investigations', 'quality', 'batch-detail'].forEach(s => document.getElementById('screen-' + s).style.display = 'none');
       document.getElementById('screen-inv-detail').style.display = 'block';
+      loadCaseLog(inv.id);
       ['home', 'batches', 'investigations', 'quality'].forEach(t => { const sb = document.getElementById('snav-' + t); if (sb) sb.classList.toggle('active', t === 'investigations'); });
       routeTo('#inv/' + encodeURIComponent(inv.id));
     }
@@ -936,8 +941,10 @@ async function loadInsights(days = 30) {
   try {
     const res = await fetch('/api/insights?days=' + days);
     if (!res.ok) return;
+    const first = !insightsCache;
     insightsCache = await res.json();
     renderInsights(insightsCache);
+    if (first && typeof renderInvestigations === 'function') renderInvestigations();  // adds Overdue chips once data arrives
   } catch (e) { console.error(e); }
 }
 
@@ -983,7 +990,8 @@ function renderInsights(d) {
       <polyline points="${pts('open')}" fill="none" stroke="var(--orange)" stroke-width="2.5"/>
     </svg>
     <div class="sec-head" style="margin-top:14px;"><h2 style="font-size:14px;">Overdue cases</h2><span class="sec-meta">review or close SLA breached</span></div>
-    ${(d.overdue || []).slice(0, 6).map(o => `<div class="list-row"><div class="row-icon warn">⏱</div><div class="row-main"><div class="row-title">${escapeHtml(o.case_id)} • ${escapeHtml(o.location_id)}</div><div class="row-sub">${label(o.kind)} • ${escapeHtml(o.priority)} • ${fmtHours(o.age_h)} old • ${o.reasons.map(r => r.replace('_', ' ')).join(', ')}</div></div></div>`).join('') || '<div class="row-sub">No overdue cases 🎉</div>'}
+    ${(d.overdue || []).length > 6 ? `<div class="row-sub" style="margin-bottom:6px;">Showing 6 of ${(d.overdue || []).length}, live cases first</div>` : ''}
+    ${[...(d.overdue || [])].sort((a, b) => (String(a.case_id).startsWith('SYN-') - String(b.case_id).startsWith('SYN-')) || (b.age_h - a.age_h)).slice(0, 6).map(o => `<div class="list-row"><div class="row-icon warn">⏱</div><div class="row-main"><div class="row-title">${escapeHtml(o.case_id)} • ${escapeHtml(o.location_id)}${String(o.case_id).startsWith('SYN-') ? '' : ' <span class="badge high">Live</span>'}</div><div class="row-sub">${label(o.kind)} • ${escapeHtml(o.priority)} • ${fmtHours(o.age_h)} old • ${o.reasons.map(r => r.replace('_', ' ')).join(', ')}</div></div></div>`).join('') || '<div class="row-sub">No overdue cases 🎉</div>'}
     <div style="font-size:11.5px; color:var(--muted); margin-top:10px;">Computed from timestamped case events (GET /api/insights). Synthetic cases replay labelled episodes with simulated handling times.</div>`;
 }
 
@@ -998,4 +1006,33 @@ async function verifyCase(caseId, btn) {
   } catch (e) {
     btn.textContent = '✕ ' + e.message;
   } finally { btn.disabled = false; }
+}
+
+
+// --- Case log in investigation detail (hash-chained events from GET /api/cases/{id}/events) ---
+async function loadCaseLog(caseId) {
+  try {
+    const res = await fetch('/api/cases/' + encodeURIComponent(caseId) + '/events');
+    if (!res.ok) return;
+    const d = await res.json();
+    const evs = d.events || [];
+    const chip = document.getElementById('caseEventsChip');
+    if (chip) chip.innerText = `🔗 ${evs.length} case event${evs.length === 1 ? '' : 's'} • ${d.chain_valid ? 'chain intact' : 'chain broken'}`;
+    const box = document.getElementById('caseLogTimeline');
+    if (!box) return;
+    const fmt = ts => { const t = new Date(ts); return isNaN(t) ? escapeHtml(ts) : t.toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }); };
+    box.innerHTML = `<div style="font-size:12px; font-weight:700; color:var(--muted); margin:14px 0 2px;">Case log • hash-chained (${d.chain_valid ? '✓ intact' : '✕ broken'})</div>` +
+      evs.map(e => `
+        <div style="display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #F1F5F9;">
+          <div class="row-icon info">🔗</div>
+          <div style="flex:1;">
+            <div style="display:flex; justify-content:space-between; gap:8px;">
+              <strong style="font-size:14px;">${escapeHtml(e.event.replace('_', ' '))} → ${escapeHtml(e.to_state || '')}</strong>
+              <span style="font-size:11.5px; color:var(--muted);">${fmt(e.ts)}</span>
+            </div>
+            <div style="font-size:13px; color:#334155; margin-top:3px;">${escapeHtml(e.note || '')}</div>
+            <div style="font-size:11.5px; color:var(--muted); margin-top:3px;">${escapeHtml(e.actor || '')} • <span class="mono">${escapeHtml(String(e.hash).slice(0, 12))}…</span></div>
+          </div>
+        </div>`).join('');
+  } catch (e) { console.error(e); }
 }
